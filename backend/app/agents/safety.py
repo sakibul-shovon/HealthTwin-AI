@@ -58,17 +58,17 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
     gate1_result = check_drug_safety(profile, drug, dose, purpose)
     
     # 3. Gate 2+3 Explanation
-    conflict_names = " + ".join([c.detail for c in gate1_result.conflicts]) if gate1_result.conflicts else None
-    forced_facts = [c.detail for c in gate1_result.conflicts]
-    
-    # If it's safe and no conflicts, we don't necessarily need a grounded explanation 
-    # but we will ask the LLM for general safety if no deterministic rules triggered.
+    # For UNSAFE/CAUTION: Gate 1 deterministic rules provide the verdict + conflict details.
+    # Skip grounded_explain for non-SAFE verdicts to avoid loading a 3rd ML model simultaneously
+    # (which exhausts Windows paging file on memory-constrained hosts).
+    # Gate 2+3 are only needed for SAFE verdicts to generate a grounded KB explanation.
     if gate1_result.verdict == "SAFE":
-        question = f"Is it safe to give {drug} to an adult?" if profile.age >= 18 else f"Is it safe to give {drug} to a {profile.age} year old child?"
+        question = (f"Is it safe to give {drug} to an adult?"
+                    if profile.age >= 18
+                    else f"Is it safe to give {drug} to a {profile.age} year old child?")
+        explanation = grounded_explain(question, forced_facts=None)
     else:
-        question = f"Why is {drug} dangerous with these conditions: {', '.join(forced_facts)}?"
-        
-    explanation = grounded_explain(question, forced_facts=forced_facts if forced_facts else None)
+        explanation = None  # Use deterministic conflict details directly — no NLI model needed
     
     # 4. Compose caregiver action
     actions = []
@@ -96,22 +96,26 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
         language=language
     )
     
-    # Detail logic: if grounded_explain was sufficient, use it. Else use deterministic fallback.
-    detail = explanation.text
-    evidence_source = explanation.evidence.source if explanation.evidence else "Deterministic rule"
-    confidence: str = explanation.evidence.confidence if explanation.evidence else "HIGH"
-    grounding_score = explanation.evidence.grounding_score if explanation.evidence else 1.0
-
-    if explanation.band == "LOW" or not explanation.evidence:
-        if gate1_result.verdict == "SAFE":
-            detail = "Absence of warning in our records is not proof of safety. Please consult a doctor."
+    # Detail logic: SAFE uses grounded KB explanation; UNSAFE/CAUTION uses deterministic conflict details.
+    if explanation is not None:
+        # SAFE path: use grounded answer
+        if explanation.band == "LOW" or not explanation.evidence:
+            detail = "No interaction found in our records, but absence of warning is not proof of safety. Please consult a doctor."
             evidence_source = "Disclaimer"
+            confidence: str = "MED"
             grounding_score = 1.0
         else:
-            detail = conflict_names
-            evidence_source = gate1_result.conflicts[0].source if gate1_result.conflicts else "Deterministic rule"
-            confidence = "HIGH"
-            grounding_score = 1.0
+            detail = explanation.text
+            evidence_source = explanation.evidence.source
+            confidence = explanation.evidence.confidence
+            grounding_score = explanation.evidence.grounding_score
+    else:
+        # UNSAFE/CAUTION path: deterministic Gate 1 verdict — no LLM needed
+        conflict_summary = " | ".join(c.detail for c in gate1_result.conflicts) if gate1_result.conflicts else "Conflict detected"
+        detail = conflict_summary
+        evidence_source = gate1_result.conflicts[0].source if gate1_result.conflicts else "Deterministic rule"
+        confidence = "HIGH"
+        grounding_score = 1.0
             
     # For display conflict UI — name the specific drugs/conditions, not just the type
     short_conflict = None
@@ -163,10 +167,11 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
     }
     
     # 6. Log trace
+    gates_used = "1,2,3" if explanation is not None else "1"
     trace = AgentTrace(
         member_id=member.id,
         intent="DRUG_SAFETY_CHECK",
-        gates_passed="1,2,3",
+        gates_passed=gates_used,
         grounding_score=grounding_score,
         source_cited=evidence_source
     )
