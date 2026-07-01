@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: healthtwin-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: "/health"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: healthtwin-db
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_TTS_API_KEY
+        sync: false

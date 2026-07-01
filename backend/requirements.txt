@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+sqlalchemy
+psycopg2-binary
+alembic
+pgvector
+httpx
+groq
+langgraph
+langchain-core
+sentence-transformers
+rank-bm25
+numpy
+pytest
