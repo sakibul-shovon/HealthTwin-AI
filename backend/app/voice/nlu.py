@@ -41,11 +41,9 @@ def load_synonyms() -> dict:
 def resolve_drug_name(drug: str, synonyms: dict) -> str:
     if not drug:
         return drug
+    # synonyms.json is { alias: canonical }, e.g. "brufen": "ibuprofen"
     d = drug.lower().strip()
-    for canonical, syn_list in synonyms.items():
-        if d == canonical or d in [s.lower() for s in syn_list]:
-            return canonical
-    return d
+    return synonyms.get(d, d)
 
 def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluResult:
     is_bn = detect_bengali(transcript)

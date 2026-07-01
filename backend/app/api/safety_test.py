@@ -16,7 +16,7 @@ class SafetyCheckRequest(BaseModel):
     language: Optional[str] = "en"
 
 @router.post("/safety")
-def test_safety_agent(req: SafetyCheckRequest, db: Session = Depends(get_db)):
+def safety_check_endpoint(req: SafetyCheckRequest, db: Session = Depends(get_db)):
     # Find guest household 
     household_record = db.query(Household).filter(Household.name == "Rahman Family").order_by(Household.id.desc()).first()
     if not household_record:

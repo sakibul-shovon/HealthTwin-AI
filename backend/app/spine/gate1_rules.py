@@ -139,20 +139,19 @@ def check_drug_safety(profile: MemberProfileSchema, drug: str, dose: Optional[st
     elif any(c.severity == "moderate" for c in conflicts):
         verdict = "CAUTION"
 
-    # 6. Alternative lookup
+    # 6. Alternative lookup — match on purpose if provided, else any purpose
     alternative = None
-    if verdict in ("UNSAFE", "CAUTION") and purpose:
-        purpose_norm = purpose.lower().strip()
-        # Which specific risky condition triggered this? We check if we have a mapped alternative
-        # Our simple mapper checks if we are on a conflicting drug or condition
+    if verdict in ("UNSAFE", "CAUTION"):
+        purpose_norm = purpose.lower().strip() if purpose else None
         active_risks = current_meds + [k for k, v in flags_dict.items() if v] + active_conditions
-        
         for alt in SAFE_ALTERNATIVES:
-            if alt.get("risky_drug") == canonical_drug and alt.get("purpose") == purpose_norm:
-                # If the conflict matched the condition_or_drug in this rule
-                if alt.get("condition_or_drug") in active_risks:
-                    alternative = alt.get("alternative")
-                    break
+            if alt.get("risky_drug") != canonical_drug:
+                continue
+            if purpose_norm and alt.get("purpose") != purpose_norm:
+                continue
+            if alt.get("condition_or_drug") in active_risks:
+                alternative = alt.get("alternative")
+                break
 
     return Gate1Result(
         verdict=verdict,
