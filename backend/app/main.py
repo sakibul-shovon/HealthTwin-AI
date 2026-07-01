@@ -20,11 +20,23 @@ app.include_router(api_router, prefix="/api")
 def read_root():
     return {"app": "HealthTwin", "version": "0.1.0"}
 
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from fastapi import Depends
+from app.graph.database import get_db
+
 @app.get("/health")
-def health_check():
+def health_check(db: Session = Depends(get_db)):
+    db_ok = False
+    try:
+        db.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        pass
+    
     return {
         "status": "ok",
-        "db": False, # Placeholder for step 02
-        "vector": False, # Placeholder for step 02
+        "db": db_ok,
+        "vector": False, # Placeholder for step 04
         "time": datetime.utcnow().isoformat()
     }
