@@ -22,7 +22,7 @@ export default function MemberRail({ members, activeMember, onSelect }: Props) {
       </h2>
       {members.map((m) => {
         const active = m.role_label === activeMember;
-        const flags = Object.entries(m.flags)
+        const flags = Object.entries(m.flags || {})
           .filter(([, v]) => v)
           .map(([k]) => FLAG_LABELS[k] ?? k);
 

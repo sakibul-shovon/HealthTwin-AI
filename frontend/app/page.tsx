@@ -141,7 +141,8 @@ export default function Home() {
   }
 
   const members = household?.members ?? [];
-  const focusedMember = (lastResponse as ResponseEnvelope | null)?.member_focus ?? null;
+  const focusedMember = lastResponse?.member_focus ?? null;
+  const alertMembers = lastResponse?.display.members ?? [];
 
   return (
     <div
@@ -237,6 +238,7 @@ export default function Home() {
                   members={members}
                   focusedMember={focusedMember}
                   activeMember={activeMember}
+                  alertMembers={alertMembers}
                   onSelect={setActiveMember}
                 />
               )}

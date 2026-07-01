@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 from app.voice.nlu import NluResult
 from app.agents.safety import run_safety_check
+from app.agents.pattern import run_pattern_check
+from app.agents.triage import run_triage
 from app.graph.crud import get_household
 
 WRITE_INTENTS = {"ADD_MEMBER", "UPDATE_MEMBER", "UPDATE_MEDICATION", "LOG_SYMPTOM", "SET_REMINDER", "ASSIGN_CAREGIVER"}
@@ -97,15 +99,21 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
         return _stub("Confirm Action", spoken, detail, language, nlu,
                      actions=[{"type": "confirm_write", "label": "Confirm", "target": nlu.member}])
 
-    # ── STUB: Triage — Step 11 ──────────────────────────────────────────────
+    # ── LIVE: Triage Agent ───────────────────────────────────────────────────
     if intent == "TRIAGE_CHECK":
-        spoken = "ট্রিয়াজ শীঘ্রই আসছে।" if language == "bn" else "Triage assessment is coming soon."
-        return _stub("Triage Check", spoken, "(Triage Agent — Step 11)", language, nlu)
+        symptom_text = " ".join(filter(None, [
+            entity.name if entity else None,
+            entity.value if entity else None,
+        ])).strip()
+        result = run_triage(db, household_id, nlu.member or "", symptom_text, language=language)
+        result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+        return result
 
-    # ── STUB: Pattern — Step 10 ─────────────────────────────────────────────
+    # ── LIVE: Pattern Agent ──────────────────────────────────────────────────
     if intent == "PATTERN_CHECK":
-        spoken = "পরিবার প্যাটার্ন শীঘ্রই আসছে।" if language == "bn" else "Household pattern detection is coming soon."
-        return _stub("Pattern Check", spoken, "(Pattern Agent — Step 10)", language, nlu)
+        result = run_pattern_check(db, household_id, language, trigger_member=nlu.member)
+        result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+        return result
 
     # ── STUB: Care — Step 12 ────────────────────────────────────────────────
     if intent in ("SET_REMINDER", "ASSIGN_CAREGIVER"):

@@ -7,6 +7,7 @@ interface Props {
   members: HouseholdMember[];
   focusedMember: string | null;
   activeMember: string | null;
+  alertMembers?: string[];  // multi-node pattern alert (amber edge glow)
   onSelect: (label: string) => void;
 }
 
@@ -25,7 +26,7 @@ const INITIALS: Record<string, string> = {
   Child: "C",
 };
 
-export default function Constellation({ members, focusedMember, activeMember, onSelect }: Props) {
+export default function Constellation({ members, focusedMember, activeMember, alertMembers = [], onSelect }: Props) {
   const RADIUS = 140;
   const SIZE = RADIUS * 2 + 80;
 
@@ -56,6 +57,7 @@ export default function Constellation({ members, focusedMember, activeMember, on
           const cx = SIZE / 2;
           const cy = SIZE / 2;
           const focused = m.role_label === focusedMember;
+          const alerted = alertMembers.includes(m.role_label);
           return (
             <line
               key={m.id}
@@ -63,10 +65,10 @@ export default function Constellation({ members, focusedMember, activeMember, on
               y1={cy}
               x2={cx + pos.x}
               y2={cy + pos.y}
-              stroke={focused ? "var(--accent)" : "var(--ink-faint)"}
-              strokeWidth={focused ? 1.5 : 1}
-              strokeDasharray={focused ? "none" : "4 4"}
-              opacity={focused ? 0.8 : 0.4}
+              stroke={alerted ? "var(--watch)" : focused ? "var(--accent)" : "var(--ink-faint)"}
+              strokeWidth={alerted ? 2 : focused ? 1.5 : 1}
+              strokeDasharray={alerted ? "6 3" : focused ? "none" : "4 4"}
+              opacity={alerted ? 0.9 : focused ? 0.8 : 0.4}
             />
           );
         })}
@@ -77,6 +79,7 @@ export default function Constellation({ members, focusedMember, activeMember, on
         const pos = nodePosition(i, members.length, RADIUS);
         const focused = m.role_label === focusedMember;
         const active = m.role_label === activeMember;
+        const alerted = alertMembers.includes(m.role_label);
 
         return (
           <motion.div
@@ -117,18 +120,34 @@ export default function Constellation({ members, focusedMember, activeMember, on
               )}
             </AnimatePresence>
 
-            {/* Continuous soft glow */}
-            {focused && (
+            {/* Continuous soft glow — focused (amber) or alerted (watch/amber) */}
+            {(focused || alerted) && (
               <motion.div
                 className="absolute rounded-full"
                 style={{
                   width: 60,
                   height: 60,
-                  background: "var(--accent-glow)",
+                  background: alerted && !focused ? "var(--watch-bg)" : "var(--accent-glow)",
                   filter: "blur(12px)",
                 }}
-                animate={{ opacity: [0.4, 0.8, 0.4] }}
-                transition={{ duration: 1.6, repeat: Infinity }}
+                animate={{ opacity: alerted ? [0.5, 1.0, 0.5] : [0.4, 0.8, 0.4] }}
+                transition={{ duration: alerted ? 1.0 : 1.6, repeat: Infinity }}
+              />
+            )}
+
+            {/* Alert ring — pulsing dashed border for pattern-involved nodes */}
+            {alerted && !focused && (
+              <motion.div
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  width: 62,
+                  height: 62,
+                  border: "2px dashed var(--watch)",
+                  left: -1,
+                  top: -1,
+                }}
+                animate={{ opacity: [0.6, 1, 0.6], scale: [1, 1.06, 1] }}
+                transition={{ duration: 1.0, repeat: Infinity }}
               />
             )}
 
@@ -138,13 +157,17 @@ export default function Constellation({ members, focusedMember, activeMember, on
               style={{
                 backgroundColor: focused
                   ? "var(--accent)"
+                  : alerted
+                  ? "var(--watch-bg)"
                   : active
                   ? "var(--primary-tint)"
                   : "var(--surface)",
-                color: focused ? "white" : "var(--primary)",
+                color: focused ? "white" : alerted ? "var(--watch)" : "var(--primary)",
                 border: `2px solid ${
                   focused
                     ? "var(--accent-deep)"
+                    : alerted
+                    ? "var(--watch)"
                     : active
                     ? "var(--primary)"
                     : "var(--ink-faint)"

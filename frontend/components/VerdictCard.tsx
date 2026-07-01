@@ -120,7 +120,7 @@ export default function VerdictCard({ response, onAction }: Props) {
               className="px-5 py-3 flex items-center justify-between"
               style={{ backgroundColor: (VERDICT_STYLE[response.verdict]?.bg) ?? DEFAULT_STYLE.bg }}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
                   className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg"
                   style={{
@@ -130,6 +130,24 @@ export default function VerdictCard({ response, onAction }: Props) {
                 >
                   {(VERDICT_STYLE[response.verdict]?.badge) ?? response.verdict}
                 </span>
+                {/* Urgency badge from triage */}
+                {response.display.urgency && response.display.urgency !== "Emergency" && (
+                  <span
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        response.display.urgency === "Urgent" ? "var(--urgent-bg)"
+                        : response.display.urgency === "Moderate" ? "var(--watch-bg)"
+                        : "var(--well-bg)",
+                      color:
+                        response.display.urgency === "Urgent" ? "var(--urgent)"
+                        : response.display.urgency === "Moderate" ? "var(--watch)"
+                        : "var(--well)",
+                    }}
+                  >
+                    {response.display.urgency}
+                  </span>
+                )}
                 <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
                   {response.display.title}
                 </span>
@@ -148,6 +166,24 @@ export default function VerdictCard({ response, onAction }: Props) {
               <p className="text-[11px] italic" style={{ color: "var(--ink-faint)" }}>
                 I heard: &ldquo;{response.display.interpreted}&rdquo;
               </p>
+            )}
+
+            {/* Pattern alert: involved members pills */}
+            {response.display.members && response.display.members.length > 1 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
+                  Involves
+                </span>
+                {response.display.members.map((m) => (
+                  <span
+                    key={m}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: "var(--watch-bg)", color: "var(--watch)" }}
+                  >
+                    {m}
+                  </span>
+                ))}
+              </div>
             )}
 
             {/* Conflict pill */}

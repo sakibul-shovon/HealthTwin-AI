@@ -25,6 +25,8 @@ export interface ResponseEnvelope {
     detail: string
     member: string | null
     interpreted: string | null
+    members?: string[]  // multi-node pattern alerts
+    urgency?: 'Emergency' | 'Urgent' | 'Moderate' | 'Low' | null
   }
   evidence: EvidenceMeta
   actions: ResponseAction[]
@@ -33,6 +35,7 @@ export interface ResponseEnvelope {
   intent?: string
   needs_confirmation?: boolean
   pending_id?: string
+  household_refresh?: boolean
 }
 
 export interface MedicationInfo {
