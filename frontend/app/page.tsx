@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
-import { getHousehold } from "@/lib/api";
+import { useEffect, useCallback } from "react";
+import { getHousehold, post, postVoiceConfirm } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
 import { ResponseEnvelope } from "@/lib/types";
+import { useVoice } from "@/hooks/useVoice";
 import MemberRail from "@/components/MemberRail";
 import Constellation from "@/components/Constellation";
 import VoiceOrb from "@/components/VoiceOrb";
@@ -20,28 +21,122 @@ export default function Home() {
     setHousehold,
     setActiveMember,
     setOrbState,
+    setLastResponse,
+    setTranscript,
   } = useTwinStore();
 
+  const isProcessing = orbState === "thinking" || orbState === "speaking";
+
+  // ── Load household on mount ────────────────────────────────────────────────
   useEffect(() => {
     getHousehold().then((data) => {
       if (data) setHousehold(data);
     });
   }, [setHousehold]);
 
+  // ── Core command handler (used by text input AND voice) ───────────────────
+  const handleCommand = useCallback(
+    async (inputTranscript: string, lang: "en" | "bn") => {
+      if (!inputTranscript.trim() || isProcessing) return;
+      setTranscript(inputTranscript);
+      setOrbState("thinking");
+
+      const data = await post("/api/voice/command", {
+        transcript: inputTranscript,
+        language: lang,
+      });
+
+      if (data) {
+        const envelope = data as ResponseEnvelope;
+        setLastResponse(envelope);
+        setOrbState("speaking");
+
+        // Speak the verdict
+        const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? lang);
+        if (utterance) {
+          utterance.onend = () => setOrbState("idle");
+          // Failsafe: reset after max 8s even if onend never fires
+          setTimeout(() => setOrbState("idle"), 8000);
+        } else {
+          const wordCount = envelope.spoken.split(" ").length;
+          setTimeout(() => setOrbState("idle"), Math.max(2500, wordCount * 350));
+        }
+      } else {
+        setOrbState("error");
+        setTimeout(() => setOrbState("idle"), 2000);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isProcessing, setOrbState, setLastResponse, setTranscript]
+  );
+
+  // ── Voice hook ─────────────────────────────────────────────────────────────
+  const { isListening, isSTTSupported, startListening, stopListening, speak } =
+    useVoice({
+      onTranscript: handleCommand,
+      onError: () => {
+        setOrbState("error");
+        setTimeout(() => setOrbState("idle"), 2000);
+      },
+      onListeningEnd: () => {
+        // If listening ends without a transcript (e.g. no-speech), go back to idle
+        if (orbState === "listening") setOrbState("idle");
+      },
+    });
+
+  // ── Orb click: toggle listening ────────────────────────────────────────────
+  function handleOrbClick() {
+    if (isProcessing) return;
+    if (orbState === "listening") {
+      stopListening();
+      setOrbState("idle");
+    } else {
+      setOrbState("listening");
+      // Use active language from the voice panel — default to 'en'
+      startListening("en");
+    }
+  }
+
+  // ── Mic button in VoicePanel ───────────────────────────────────────────────
+  function handleMicClick(lang: "en" | "bn") {
+    if (isProcessing) return;
+    if (orbState === "listening") {
+      stopListening();
+      setOrbState("idle");
+    } else {
+      setOrbState("listening");
+      startListening(lang);
+    }
+  }
+
+  // ── Confirm action (e.g. "Notify Ma?") ────────────────────────────────────
+  async function handleAction(action: {
+    type: string;
+    label: string;
+    target: string | null;
+    pending_id?: string;
+  }) {
+    if (action.type === "notify_caregiver" && action.target) {
+      const msg = `Notifying ${action.target}.`;
+      setOrbState("speaking");
+      speak(msg, "en");
+      setTimeout(() => setOrbState("idle"), 2500);
+    }
+    if (action.pending_id) {
+      const result = await postVoiceConfirm(action.pending_id, true);
+      if (result) setLastResponse(result);
+    }
+  }
+
   const members = household?.members ?? [];
   const focusedMember = (lastResponse as ResponseEnvelope | null)?.member_focus ?? null;
-
-  function handleOrbClick() {
-    if (orbState === "idle") setOrbState("listening");
-    else if (orbState === "listening") setOrbState("idle");
-  }
 
   return (
     <div
       className="flex flex-col h-screen overflow-hidden"
       style={{ backgroundColor: "var(--canvas)" }}
     >
-      {/* ── Header ─────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────── */}
       <header
         className="flex items-center justify-between px-6 py-3 shrink-0"
         style={{
@@ -57,17 +152,40 @@ export default function Home() {
             HT
           </div>
           <div>
-            <h1 className="text-base font-bold leading-tight text-white">HealthTwin</h1>
+            <h1 className="text-base font-bold leading-tight text-white">
+              HealthTwin
+            </h1>
             <p className="text-[11px]" style={{ color: "var(--primary-tint)" }}>
               Family Command Center
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {isSTTSupported ? (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "var(--well-bg)", color: "var(--well)" }}
+            >
+              Voice ready
+            </span>
+          ) : (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: "var(--watch-bg)",
+                color: "var(--watch)",
+              }}
+            >
+              Text-only mode
+            </span>
+          )}
           {household && (
             <span
               className="text-xs px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}
+              style={{
+                backgroundColor: "var(--primary-deep)",
+                color: "var(--primary-tint)",
+              }}
             >
               {household.name}
             </span>
@@ -75,9 +193,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Body ───────────────────────────────────────────────── */}
+      {/* ── Body ────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
-
         {/* Left: Member Rail */}
         <div
           className="w-56 shrink-0 overflow-y-auto"
@@ -87,7 +204,7 @@ export default function Home() {
             <MemberRail
               members={members}
               activeMember={activeMember}
-              onSelect={(label) => setActiveMember(label)}
+              onSelect={setActiveMember}
             />
           ) : (
             <div className="flex items-center justify-center h-full">
@@ -101,31 +218,27 @@ export default function Home() {
         {/* Center: Living Twin */}
         <div className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-hidden">
           {/* Constellation + Orb */}
-          <div className="flex-1 flex flex-col items-center justify-center relative">
-            {members.length > 0 && (
-              <div className="relative">
-                {/* Constellation nodes are positioned around the orb */}
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="relative">
+              {members.length > 0 && (
                 <Constellation
                   members={members}
                   focusedMember={focusedMember}
                   activeMember={activeMember}
-                  onSelect={(label) => setActiveMember(label)}
+                  onSelect={setActiveMember}
                 />
-                {/* Orb sits in the center of the constellation */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <VoiceOrb onClick={handleOrbClick} />
-                </div>
+              )}
+              {/* Orb floats in the constellation centre */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <VoiceOrb onClick={handleOrbClick} />
               </div>
-            )}
-            {members.length === 0 && (
-              <VoiceOrb onClick={handleOrbClick} />
-            )}
+            </div>
           </div>
 
           {/* Transcript hint */}
           {transcript && (
             <p
-              className="text-xs text-center px-4 mb-2 truncate max-w-xs"
+              className="text-xs text-center px-4 mb-2 italic max-w-xs truncate"
               style={{ color: "var(--ink-faint)" }}
             >
               &ldquo;{transcript}&rdquo;
@@ -140,7 +253,13 @@ export default function Home() {
               border: "1px solid var(--surface-sunk)",
             }}
           >
-            <VoicePanel />
+            <VoicePanel
+              onSubmit={handleCommand}
+              isListening={isListening}
+              isSTTSupported={isSTTSupported}
+              onMicClick={handleMicClick}
+              disabled={isProcessing}
+            />
           </div>
         </div>
 
@@ -155,7 +274,10 @@ export default function Home() {
           >
             Verdict
           </h2>
-          <VerdictCard response={lastResponse as ResponseEnvelope | null} />
+          <VerdictCard
+            response={lastResponse as ResponseEnvelope | null}
+            onAction={handleAction}
+          />
         </div>
       </div>
     </div>

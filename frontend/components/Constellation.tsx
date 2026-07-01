@@ -1,5 +1,6 @@
 "use client";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { HouseholdMember } from "@/lib/types";
 
 interface Props {
@@ -9,7 +10,6 @@ interface Props {
   onSelect: (label: string) => void;
 }
 
-// Distribute members in a circle around the centre. Index 0 = top, going clockwise.
 function nodePosition(index: number, total: number, radius: number) {
   const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
   return {
@@ -27,7 +27,17 @@ const INITIALS: Record<string, string> = {
 
 export default function Constellation({ members, focusedMember, activeMember, onSelect }: Props) {
   const RADIUS = 140;
-  const SIZE = RADIUS * 2 + 80; // container size
+  const SIZE = RADIUS * 2 + 80;
+
+  // Track changes to focusedMember to trigger a burst ripple
+  const [burstKey, setBurstKey] = useState(0);
+  const prevFocused = useRef<string | null>(null);
+  useEffect(() => {
+    if (focusedMember && focusedMember !== prevFocused.current) {
+      setBurstKey((k) => k + 1);
+    }
+    prevFocused.current = focusedMember;
+  }, [focusedMember]);
 
   return (
     <div
@@ -78,7 +88,36 @@ export default function Constellation({ members, focusedMember, activeMember, on
             }}
             onClick={() => onSelect(m.role_label)}
           >
-            {/* Glow ring when focused */}
+            {/* One-shot burst ripple when this node becomes focused */}
+            <AnimatePresence>
+              {focused && (
+                <>
+                  {[0, 1].map((ring) => (
+                    <motion.div
+                      key={`burst-${burstKey}-${ring}`}
+                      className="absolute rounded-full pointer-events-none"
+                      style={{
+                        width: 56,
+                        height: 56,
+                        border: "2px solid var(--accent)",
+                        left: 0,
+                        top: 0,
+                      }}
+                      initial={{ scale: 1, opacity: 0.8 }}
+                      animate={{ scale: 3.2, opacity: 0 }}
+                      exit={{}}
+                      transition={{
+                        duration: 1.0,
+                        delay: ring * 0.25,
+                        ease: "easeOut",
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+            </AnimatePresence>
+
+            {/* Continuous soft glow */}
             {focused && (
               <motion.div
                 className="absolute rounded-full"
@@ -86,11 +125,10 @@ export default function Constellation({ members, focusedMember, activeMember, on
                   width: 60,
                   height: 60,
                   background: "var(--accent-glow)",
-                  filter: "blur(10px)",
-                  opacity: 0.7,
+                  filter: "blur(12px)",
                 }}
-                animate={{ opacity: [0.5, 0.9, 0.5] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
+                animate={{ opacity: [0.4, 0.8, 0.4] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
               />
             )}
 
@@ -104,7 +142,13 @@ export default function Constellation({ members, focusedMember, activeMember, on
                   ? "var(--primary-tint)"
                   : "var(--surface)",
                 color: focused ? "white" : "var(--primary)",
-                border: `2px solid ${focused ? "var(--accent-deep)" : active ? "var(--primary)" : "var(--ink-faint)"}`,
+                border: `2px solid ${
+                  focused
+                    ? "var(--accent-deep)"
+                    : active
+                    ? "var(--primary)"
+                    : "var(--ink-faint)"
+                }`,
               }}
               animate={focused ? { scale: [1, 1.08, 1] } : { scale: 1 }}
               transition={focused ? { duration: 1.2, repeat: Infinity } : {}}
@@ -113,7 +157,7 @@ export default function Constellation({ members, focusedMember, activeMember, on
               {INITIALS[m.role_label] ?? m.role_label[0]}
             </motion.div>
 
-            {/* Name + age label */}
+            {/* Name + age */}
             <div className="flex flex-col items-center" style={{ minWidth: 60 }}>
               <span
                 className="text-xs font-semibold leading-tight"

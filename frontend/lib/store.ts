@@ -1,24 +1,25 @@
-import { create } from 'zustand';
+import { create } from "zustand";
+import { Household, ResponseEnvelope } from "./types";
 
 interface TwinState {
-  household: any;
-  activeMember: any;
-  orbState: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
-  lastResponse: any;
+  household: Household | null;
+  activeMember: string | null;
+  orbState: "idle" | "listening" | "thinking" | "speaking" | "error";
+  lastResponse: ResponseEnvelope | null;
   transcript: string;
-  setHousehold: (household: any) => void;
-  setActiveMember: (member: any) => void;
-  setOrbState: (state: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error') => void;
-  setLastResponse: (response: any) => void;
+  setHousehold: (household: Household) => void;
+  setActiveMember: (member: string | null) => void;
+  setOrbState: (state: TwinState["orbState"]) => void;
+  setLastResponse: (response: ResponseEnvelope | null) => void;
   setTranscript: (transcript: string) => void;
 }
 
 export const useTwinStore = create<TwinState>((set) => ({
   household: null,
   activeMember: null,
-  orbState: 'idle',
+  orbState: "idle",
   lastResponse: null,
-  transcript: '',
+  transcript: "",
   setHousehold: (household) => set({ household }),
   setActiveMember: (activeMember) => set({ activeMember }),
   setOrbState: (orbState) => set({ orbState }),

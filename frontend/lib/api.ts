@@ -30,7 +30,7 @@ export async function postVoiceConfirm(pending_id: string, confirmed: boolean) {
   return post("/api/voice/confirm", { pending_id, confirmed });
 }
 
-export async function post(path: string, body: any) {
+export async function post(path: string, body: Record<string, unknown>) {
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
       method: 'POST',

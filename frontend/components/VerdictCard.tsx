@@ -1,6 +1,6 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
-import { ResponseEnvelope, VerdictType } from "@/lib/types";
+import { ResponseEnvelope } from "@/lib/types";
 
 interface Props {
   response: ResponseEnvelope | null;
