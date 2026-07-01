@@ -1,7 +1,7 @@
 import os
 import json
 import re
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, Field
 from groq import Groq
 from app.graph.database import SessionLocal
@@ -64,25 +64,40 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
     
     api_key = settings.GROQ_API_KEY
     if not api_key:
-        # Fallback Mock for testing
-        if "ibuprofen" in transcript.lower() or "ওষুধ" in transcript:
+        # Fallback Mock for testing (no GROQ key)
+        tl = transcript.lower()
+        if "ibuprofen" in tl or "ওষুধ" in transcript:
             return NluResult(
                 intent="DRUG_SAFETY_CHECK",
-                member="Baba" if "baba" in transcript.lower() or "বাবা" in transcript else "Self",
+                member="Baba" if ("baba" in tl or "বাবা" in transcript) else "Self",
                 language=detected_lang,
                 confidence=0.9,
-                entity=EntityInfo(type="medication", name="ibuprofen")
+                entity=EntityInfo(type="medication", name="ibuprofen"),
             )
-        elif "losartan" in transcript.lower():
-            return NluResult(
-                intent="UPDATE_MEDICATION",
-                member="Ma",
-                language=detected_lang,
-                confidence=0.9,
-                needs_confirmation=True,
-                action="add",
-                entity=EntityInfo(type="medication", name="losartan", dose="50")
-            )
+        # Generic medication-write pattern: "add X to/for Y" or drug name in known list
+        _MOCK_DRUGS = {
+            "losartan": ("Ma", "losartan", "50mg"),
+            "metformin": ("Ma", "metformin", "500mg"),
+            "aspirin": ("Baba", "aspirin", "100mg"),
+            "paracetamol": ("Baba", "paracetamol", "500mg"),
+        }
+        for drug, (default_member, drug_name, default_dose) in _MOCK_DRUGS.items():
+            if drug in tl:
+                # Resolve member from transcript if mentioned
+                member_label = default_member
+                for alias, label in [("baba", "Baba"), ("ma", "Ma"), ("self", "Self"), ("child", "Child")]:
+                    if alias in tl:
+                        member_label = label
+                        break
+                return NluResult(
+                    intent="UPDATE_MEDICATION",
+                    member=member_label,
+                    language=detected_lang,
+                    confidence=0.9,
+                    needs_confirmation=True,
+                    action="add",
+                    entity=EntityInfo(type="medication", name=drug_name, dose=default_dose),
+                )
         return NluResult(intent="UNKNOWN", language=detected_lang, confidence=0.0)
 
     # Real LLM call

@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from app.voice.nlu import NluResult
 from app.agents.safety import run_safety_check
 from app.graph.crud import get_household
-from app.graph.models import Household
 
 WRITE_INTENTS = {"ADD_MEMBER", "UPDATE_MEMBER", "UPDATE_MEDICATION", "LOG_SYMPTOM", "SET_REMINDER", "ASSIGN_CAREGIVER"}
 
@@ -83,16 +82,19 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
             envelope.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
         return envelope
 
-    # ── STUB: Profile writes — real commits in Step 09 ──────────────────────
+    # ── LIVE: Profile writes with confirm-before-commit ──────────────────────
     if intent in ("ADD_MEMBER", "UPDATE_MEMBER", "UPDATE_MEDICATION", "LOG_SYMPTOM"):
         entity_name = entity.name if entity else "that"
-        action = nlu.action or "update"
+        dose_hint = f" {entity.dose}" if (entity and entity.dose) else ""
+        action = nlu.action or "add"
         m = nlu.member or "the member"
         if language == "bn":
-            spoken = f"{m} এর জন্য {entity_name} {action} করবো — নিশ্চিত করুন?"
+            spoken = f"{m} এর জন্য {entity_name}{dose_hint} {action} করবো — নিশ্চিত করুন?"
         else:
-            spoken = f"I'll {action} {entity_name} for {m} — say yes to confirm."
-        return _stub("Confirm Action", spoken, "(Write actions active in Step 09)", language, nlu,
+            spoken = f"I'll {action} {entity_name}{dose_hint} for {m} — confirm?"
+        detail = (f"This will {action} {entity_name}{dose_hint} for {m}. "
+                  "Say 'yes' or tap Confirm to save.")
+        return _stub("Confirm Action", spoken, detail, language, nlu,
                      actions=[{"type": "confirm_write", "label": "Confirm", "target": nlu.member}])
 
     # ── STUB: Triage — Step 11 ──────────────────────────────────────────────

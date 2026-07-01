@@ -72,22 +72,75 @@ def resolve_member(db: Session, household_id: int, spoken_name: str) -> Optional
     
     return member
 
-# --- Write Helpers (Signatures for Step 09) ---
+def add_member(db: Session, household_id: int, data: dict) -> models.Member:
+    member = models.Member(
+        household_id=household_id,
+        display_name=data.get("display_name") or data.get("role_label", "New Member"),
+        role_label=data.get("role_label", "New Member"),
+        age=int(data.get("age", 0)),
+        sex=data.get("sex", "unknown"),
+        weight_kg=data.get("weight_kg"),
+        kidney_impaired=data.get("kidney_impaired", False),
+        liver_impaired=data.get("liver_impaired", False),
+        pregnant=data.get("pregnant", False),
+    )
+    db.add(member)
+    db.commit()
+    db.refresh(member)
+    return member
 
-def add_member(db: Session, household_id: int, data: dict):
-    pass
+def add_medication(db: Session, member_id: int, name: str, dose: str) -> models.Medication:
+    med = models.Medication(member_id=member_id, name=name, dose=dose or "—")
+    db.add(med)
+    db.commit()
+    db.refresh(med)
+    return med
 
-def add_medication(db: Session, member_id: int, name: str, dose: str):
-    pass
+def add_condition(db: Session, member_id: int, name: str) -> models.Condition:
+    cond = models.Condition(member_id=member_id, name=name)
+    db.add(cond)
+    db.commit()
+    db.refresh(cond)
+    return cond
 
-def add_condition(db: Session, member_id: int, name: str):
-    pass
+def add_allergy(db: Session, member_id: int, substance: str, reaction: Optional[str] = None) -> models.Allergy:
+    allergy = models.Allergy(member_id=member_id, substance=substance, reaction=reaction)
+    db.add(allergy)
+    db.commit()
+    db.refresh(allergy)
+    return allergy
 
-def add_allergy(db: Session, member_id: int, substance: str, reaction: Optional[str] = None):
-    pass
+def log_symptom(db: Session, member_id: int, symptom: str, severity: Optional[str] = None) -> models.SymptomLog:
+    entry = models.SymptomLog(member_id=member_id, symptom=symptom, severity=severity)
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
 
-def log_symptom(db: Session, member_id: int, symptom: str, severity: Optional[str] = None):
-    pass
+def update_member_flags(db: Session, member_id: int, **flags) -> Optional[models.Member]:
+    member = db.query(models.Member).filter(models.Member.id == member_id).first()
+    if not member:
+        return None
+    for key, value in flags.items():
+        if hasattr(member, key):
+            setattr(member, key, value)
+    db.commit()
+    db.refresh(member)
+    return member
 
 def set_caregiver(db: Session, from_member_id: int, to_member_id: int, is_caregiver: bool = True):
-    pass
+    rel = db.query(models.Relationship).filter(
+        models.Relationship.from_member_id == from_member_id,
+        models.Relationship.to_member_id == to_member_id,
+    ).first()
+    if rel:
+        rel.caregiver = is_caregiver
+    else:
+        rel = models.Relationship(
+            from_member_id=from_member_id,
+            to_member_id=to_member_id,
+            type=models.RelationshipType.parent_of,
+            caregiver=is_caregiver,
+        )
+        db.add(rel)
+    db.commit()

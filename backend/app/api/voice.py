@@ -9,6 +9,7 @@ from app.voice.nlu import parse_command
 from app.voice.pending import store_pending, retrieve_pending, clear_pending
 from app.agents.router import route
 from app.agents.composer import compose
+from app.agents.profile import run_profile_write
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -59,7 +60,7 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/confirm")
-def voice_confirm(req: ConfirmRequest):
+def voice_confirm(req: ConfirmRequest, db: Session = Depends(get_db)):
     nlu = retrieve_pending(req.pending_id)
     if not nlu:
         raise HTTPException(status_code=404, detail="Pending command not found or already resolved")
@@ -67,27 +68,17 @@ def voice_confirm(req: ConfirmRequest):
     clear_pending(req.pending_id)
 
     if not req.confirmed:
+        lang = nlu.language
         return {
             "verdict": "CANCELLED",
-            "spoken": "Cancelled." if nlu.language == "en" else "বাতিল করা হয়েছে।",
+            "spoken": "Cancelled." if lang == "en" else "বাতিল করা হয়েছে।",
             "display": {"title": "Cancelled", "detail": "Command cancelled by user.",
                         "conflict": None, "alternative": None, "member": nlu.member, "interpreted": None},
             "evidence": {"source": None, "confidence": None, "grounding_score": None},
             "actions": [],
-            "language": nlu.language,
+            "member_focus": None,
+            "language": lang,
         }
 
-    # Write commits live in Step 09; return ack for now
-    entity_name = nlu.entity.name if nlu.entity else "item"
-    m = nlu.member or "member"
-    spoken = (f"{entity_name} {m} এর জন্য যোগ করা হয়েছে।" if nlu.language == "bn"
-              else f"{entity_name} added for {m}.")
-    return {
-        "verdict": "CONFIRMED",
-        "spoken": spoken,
-        "display": {"title": "Done", "detail": "(Write commits active in Step 09)",
-                    "conflict": None, "alternative": None, "member": m, "interpreted": None},
-        "evidence": {"source": None, "confidence": None, "grounding_score": None},
-        "actions": [],
-        "language": nlu.language,
-    }
+    household_id = _get_household_id(db)
+    return run_profile_write(db, household_id, nlu)

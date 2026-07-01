@@ -109,7 +109,7 @@ export default function Home() {
     }
   }
 
-  // ── Confirm action (e.g. "Notify Ma?") ────────────────────────────────────
+  // ── Confirm action (e.g. "Notify Ma?" / "Confirm" write) ─────────────────
   async function handleAction(action: {
     type: string;
     label: string;
@@ -124,7 +124,19 @@ export default function Home() {
     }
     if (action.pending_id) {
       const result = await postVoiceConfirm(action.pending_id, true);
-      if (result) setLastResponse(result);
+      if (result) {
+        setLastResponse(result);
+        // Re-fetch household so constellation + member rail reflect the write
+        if ((result as { household_refresh?: boolean }).household_refresh) {
+          const fresh = await getHousehold();
+          if (fresh) setHousehold(fresh);
+        }
+        if (result.spoken) {
+          const utterance = speak(result.spoken, (result.language as "en" | "bn") ?? "en");
+          if (utterance) utterance.onend = () => setOrbState("idle");
+          else setTimeout(() => setOrbState("idle"), 2500);
+        }
+      }
     }
   }
 
