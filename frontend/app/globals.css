@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400..800&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Geist+Mono:wght@100..900&family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --canvas:#F6F3ED; --surface:#FCFAF6; --surface-sunk:#EEEAE1;
+  --primary:#0F4C55; --primary-tint:#D7E7E3; --primary-deep:#0A363D;
+  --accent:#E89A3C; --accent-deep:#C9741E; --accent-glow:#F4C486;
+  --ink:#16262A; --ink-soft:#5A6B6E; --ink-faint:#94A3A4;
+  --well:#2E7D5B; --well-bg:#E0EFE7; --watch:#DFA100; --watch-bg:#FBF0D3;
+  --urgent:#D1495B; --urgent-bg:#F8E1E4; --info:#3A7CA5;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: 'Hanken Grotesk', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Bricolage Grotesque', sans-serif;
+}
