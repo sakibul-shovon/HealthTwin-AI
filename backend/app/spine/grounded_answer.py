@@ -1,6 +1,6 @@
 import os
 import re
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from pydantic import BaseModel
 from app.spine.gate2_retrieval import retrieve
 from app.spine.gate3_nli import verify_claims
@@ -9,7 +9,7 @@ from groq import Groq
 class EvidenceMeta(BaseModel):
     source: str
     url: str
-    confidence: float
+    confidence: str   # "HIGH" | "MED" | "LOW"
     grounding_score: float
 
 class GroundedAnswer(BaseModel):
@@ -92,12 +92,14 @@ def grounded_explain(question: str, forced_facts: Optional[List[str]] = None) ->
     # Take the top source from retrieval
     top_chunk = retrieval_res.chunks[0]
     
+    confidence_band = grounding_res.band  # already "HIGH" | "MED" | "LOW"
+
     return GroundedAnswer(
         text=final_text,
         evidence=EvidenceMeta(
             source=top_chunk.source,
             url=top_chunk.url,
-            confidence=retrieval_res.top_score,
+            confidence=confidence_band,
             grounding_score=grounding_res.grounding_score
         ),
         band=grounding_res.band

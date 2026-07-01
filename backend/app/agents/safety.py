@@ -1,5 +1,3 @@
-import os
-import json
 from typing import Optional
 from sqlalchemy.orm import Session
 from app.graph.crud import resolve_member, get_member_profile
@@ -101,9 +99,9 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
     # Detail logic: if grounded_explain was sufficient, use it. Else use deterministic fallback.
     detail = explanation.text
     evidence_source = explanation.evidence.source if explanation.evidence else "Deterministic rule"
-    confidence = explanation.evidence.confidence if explanation.evidence else "HIGH"
+    confidence: str = explanation.evidence.confidence if explanation.evidence else "HIGH"
     grounding_score = explanation.evidence.grounding_score if explanation.evidence else 1.0
-    
+
     if explanation.band == "LOW" or not explanation.evidence:
         if gate1_result.verdict == "SAFE":
             detail = "Absence of warning in our records is not proof of safety. Please consult a doctor."
@@ -115,17 +113,27 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
             confidence = "HIGH"
             grounding_score = 1.0
             
-    # For display conflict UI
+    # For display conflict UI — name the specific drugs/conditions, not just the type
     short_conflict = None
     if gate1_result.conflicts:
-        # Take the most severe conflict type
         types = [c.type for c in gate1_result.conflicts]
         if "interaction" in types:
-            short_conflict = f"Interaction Risk"
+            # Extract drug names from the detail string: "Interaction between X and Y: ..."
+            interaction = next(c for c in gate1_result.conflicts if c.type == "interaction")
+            parts = interaction.detail.split(":")
+            drug_pair = parts[0].replace("Interaction between", "").strip() if parts else ""
+            mechanism = parts[1].strip() if len(parts) > 1 else interaction.mechanism if hasattr(interaction, "mechanism") else ""
+            short_conflict = f"{drug_pair} → {mechanism}" if drug_pair else "Drug Interaction"
         elif "contraindication" in types:
-            short_conflict = f"Contraindication"
+            contra = next(c for c in gate1_result.conflicts if c.type == "contraindication")
+            # e.g. "ibuprofen is contraindicated: NSAIDs worsen renal function"
+            reason = contra.detail.split(":")[-1].strip() if ":" in contra.detail else contra.detail
+            short_conflict = f"Contraindication — {reason}"
+        elif "allergy" in types:
+            allergy = next(c for c in gate1_result.conflicts if c.type == "allergy")
+            short_conflict = allergy.detail
         else:
-            short_conflict = gate1_result.conflicts[0].type.capitalize()
+            short_conflict = gate1_result.conflicts[0].detail
             
     title_map = {
         "SAFE": "Safe to Proceed",
@@ -146,7 +154,7 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
         },
         "evidence": {
             "source": evidence_source,
-            "confidence": "HIGH" if confidence == "HIGH" or isinstance(confidence, float) and confidence > 0.8 else "MED",
+            "confidence": confidence,
             "grounding_score": grounding_score
         },
         "actions": actions,

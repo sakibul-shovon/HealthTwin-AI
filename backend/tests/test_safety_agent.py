@@ -34,7 +34,8 @@ def test_safety_agent_flagship_unsafe_en(db, rahman_household_id):
     )
     
     assert envelope["verdict"] == "UNSAFE"
-    assert "Warfarin" in envelope["display"]["conflict"] or "Kidney" in envelope["display"]["conflict"] or "Interaction" in envelope["display"]["conflict"] or "Contraindication" in envelope["display"]["conflict"]
+    conflict = envelope["display"]["conflict"].lower()
+    assert "warfarin" in conflict or "ibuprofen" in conflict or "interaction" in conflict or "contraindication" in conflict or "bleeding" in conflict
     assert "Paracetamol" in envelope["display"]["alternative"]
     
     # Check action "Notify Ma"

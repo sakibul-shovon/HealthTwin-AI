@@ -3,12 +3,12 @@ import { create } from 'zustand';
 interface TwinState {
   household: any;
   activeMember: any;
-  orbState: 'idle' | 'listening' | 'thinking' | 'speaking';
+  orbState: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
   lastResponse: any;
   transcript: string;
   setHousehold: (household: any) => void;
   setActiveMember: (member: any) => void;
-  setOrbState: (state: 'idle' | 'listening' | 'thinking' | 'speaking') => void;
+  setOrbState: (state: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error') => void;
   setLastResponse: (response: any) => void;
   setTranscript: (transcript: string) => void;
 }

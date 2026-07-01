@@ -28,15 +28,21 @@ from app.graph.database import get_db
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     db_ok = False
+    vector_ok = False
     try:
         db.execute(text("SELECT 1"))
         db_ok = True
     except Exception:
         pass
-    
+    try:
+        db.execute(text("SELECT 1 FROM kb_chunks LIMIT 1"))
+        vector_ok = True
+    except Exception:
+        pass
+
     return {
         "status": "ok",
         "db": db_ok,
-        "vector": False, # Placeholder for step 04
+        "vector": vector_ok,
         "time": datetime.utcnow().isoformat()
     }

@@ -2,12 +2,9 @@ import os
 import sys
 import json
 import pickle
-import numpy as np
 
-# Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from sqlalchemy.orm import Session
 from app.graph.database import SessionLocal
 from app.graph.models import KBChunk
 from sentence_transformers import SentenceTransformer
@@ -17,9 +14,10 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 CORPUS_PATH = os.path.join(DATA_DIR, "corpus.json")
 BM25_PATH = os.path.join(DATA_DIR, "bm25_index.pkl")
 
-def tokenize(text: str) -> list[str]:
-    # Simple whitespace tokenization for BM25
+
+def tokenize(text: str) -> list:
     return text.lower().split()
+
 
 def load_corpus():
     if not os.path.exists(CORPUS_PATH):
@@ -34,32 +32,22 @@ def load_corpus():
         return
 
     print(f"Loading {len(chunks)} chunks...")
-    
-    # Load embedding model
-    print("Loading mock BAAI/bge-base-en-v1.5 model (memory constrained environment)...")
-    class MockEmbedder:
-        def encode(self, text, normalize_embeddings=True):
-            return np.random.rand(768).astype(np.float32)
-            
-    model = MockEmbedder()
-    
-    # Process BM25
+    print("Loading BAAI/bge-base-en-v1.5 embedding model (downloading on first run)...")
+    model = SentenceTransformer("BAAI/bge-base-en-v1.5")
+
     tokenized_corpus = []
     chunk_ids = []
-    
+
     db = SessionLocal()
     try:
-        # Clear existing
         db.query(KBChunk).delete()
-        
+
         for c in chunks:
             text = c["text"]
             chunk_id = c["id"]
-            
-            # Embed
+
             embedding = model.encode(text, normalize_embeddings=True)
-            
-            # DB entry
+
             kb_chunk = KBChunk(
                 id=chunk_id,
                 text=text,
@@ -69,26 +57,23 @@ def load_corpus():
                 embedding=embedding.tolist()
             )
             db.add(kb_chunk)
-            
-            # BM25 tokens
+
             tokenized_corpus.append(tokenize(text))
             chunk_ids.append(chunk_id)
-            
+            print(f"  Embedded: {chunk_id}")
+
         db.commit()
-        print("Vectors stored in database successfully.")
-        
-        # Build and save BM25 index
+        print("Vectors stored in database.")
+
         bm25 = BM25Okapi(tokenized_corpus)
-        bm25_data = {
-            "index": bm25,
-            "chunk_ids": chunk_ids
-        }
         with open(BM25_PATH, "wb") as f:
-            pickle.dump(bm25_data, f)
-        print("BM25 index saved successfully.")
-        
+            pickle.dump({"index": bm25, "chunk_ids": chunk_ids}, f)
+        print("BM25 index saved.")
+        print(f"Done. {len(chunks)} chunks loaded.")
+
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     load_corpus()
