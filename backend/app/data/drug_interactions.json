@@ -1,0 +1,37 @@
+[
+  {
+    "drug_a": "warfarin",
+    "drug_b": "ibuprofen",
+    "severity": "high",
+    "mechanism": "increased bleeding risk (NSAID + anticoagulant)",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "warfarin",
+    "drug_b": "aspirin",
+    "severity": "high",
+    "mechanism": "increased bleeding risk",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "metformin",
+    "drug_b": "iodinated contrast",
+    "severity": "high",
+    "mechanism": "lactic acidosis risk",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "lisinopril",
+    "drug_b": "spironolactone",
+    "severity": "high",
+    "mechanism": "hyperkalemia risk (ACE-inhibitor + potassium-sparing diuretic)",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "fluoxetine",
+    "drug_b": "ibuprofen",
+    "severity": "moderate",
+    "mechanism": "increased bleeding risk (SSRI + NSAID)",
+    "source": "DrugBank subset"
+  }
+]

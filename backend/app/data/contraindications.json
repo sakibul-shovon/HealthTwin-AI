@@ -1,0 +1,23 @@
+[
+  {
+    "drug": "ibuprofen",
+    "contraindicated_if": ["kidney_impaired", "pregnant"],
+    "reason": "NSAIDs worsen renal function / fetal risk",
+    "severity": "high",
+    "source": "WHO fact sheet"
+  },
+  {
+    "drug": "metformin",
+    "contraindicated_if": ["kidney_impaired", "liver_impaired"],
+    "reason": "Risk of lactic acidosis",
+    "severity": "high",
+    "source": "WHO fact sheet"
+  },
+  {
+    "drug": "warfarin",
+    "contraindicated_if": ["pregnant"],
+    "reason": "Teratogenic and bleeding risk",
+    "severity": "high",
+    "source": "WHO fact sheet"
+  }
+]

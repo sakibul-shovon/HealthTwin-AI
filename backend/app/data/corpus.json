@@ -1,0 +1,51 @@
+[
+  {
+    "id": "chunk_warfarin_1",
+    "text": "Warfarin is an anticoagulant (blood thinner) used to prevent blood clots. Taking warfarin with NSAIDs (Non-Steroidal Anti-Inflammatory Drugs) like ibuprofen, naproxen, or aspirin significantly increases the risk of dangerous bleeding, as both medications affect blood clotting mechanisms.",
+    "source": "WHO Fact Sheet on Anticoagulants",
+    "url": "https://www.who.int/docs/warfarin",
+    "topic": "warfarin, NSAIDs, bleeding risk"
+  },
+  {
+    "id": "chunk_nsaid_1",
+    "text": "NSAIDs (Non-Steroidal Anti-Inflammatory Drugs) such as ibuprofen should be used with extreme caution or avoided in patients with existing kidney impairment. NSAIDs reduce blood flow to the kidneys, which can acutely worsen renal function and lead to kidney failure in vulnerable patients.",
+    "source": "DGHS Clinical Guidelines on Renal Care",
+    "url": "https://dghs.gov.bd/guidelines/renal",
+    "topic": "ibuprofen, NSAIDs, kidney impairment"
+  },
+  {
+    "id": "chunk_paracetamol_1",
+    "text": "Paracetamol (acetaminophen) is a safe and effective medication for pain relief and fever reduction when taken within recommended limits. The maximum adult daily dose is 4000 mg. For children, the safe dose is 10 to 15 mg per kg of body weight per dose, with a maximum of 60 mg per kg per day.",
+    "source": "WHO Model Prescribing Information",
+    "url": "https://www.who.int/medicines/paracetamol",
+    "topic": "paracetamol, dosing, fever, children"
+  },
+  {
+    "id": "chunk_paracetamol_2",
+    "text": "Unlike NSAIDs, paracetamol does not significantly irritate the stomach lining. It is generally safe to take paracetamol on an empty stomach with a glass of water.",
+    "source": "WHO Essential Medicines",
+    "url": "https://www.who.int/medicines/paracetamol",
+    "topic": "paracetamol, empty stomach"
+  },
+  {
+    "id": "chunk_diabetes_1",
+    "text": "Type 2 diabetes is a chronic condition that affects the way the body processes blood sugar (glucose). Metformin is commonly prescribed as a first-line treatment. Patients on metformin should avoid iodinated contrast materials as it increases the risk of a rare but serious condition called lactic acidosis.",
+    "source": "DGHS Diabetes Management Protocol",
+    "url": "https://dghs.gov.bd/guidelines/diabetes",
+    "topic": "diabetes, metformin, contrast"
+  },
+  {
+    "id": "chunk_dengue_1",
+    "text": "Dengue fever is a mosquito-borne illness. Warning signs of severe dengue include severe abdominal pain, persistent vomiting, rapid breathing, bleeding gums, and fatigue. If a patient with fever exhibits any of these signs, they must seek immediate emergency medical care.",
+    "source": "DGHS Dengue Alert",
+    "url": "https://dghs.gov.bd/guidelines/dengue",
+    "topic": "dengue, warning signs, fever"
+  },
+  {
+    "id": "chunk_penicillin_1",
+    "text": "Penicillin allergy is a common adverse drug reaction. Patients with a known allergy to penicillin should avoid all penicillin-class antibiotics, including amoxicillin and ampicillin, as they can trigger allergic reactions ranging from mild skin rashes to severe anaphylaxis.",
+    "source": "WHO Fact Sheet on Antibiotic Safety",
+    "url": "https://www.who.int/docs/antibiotics",
+    "topic": "penicillin allergy, amoxicillin"
+  }
+]

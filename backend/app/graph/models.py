@@ -125,3 +125,14 @@ class AgentTrace(Base):
     grounding_score = Column(Float, nullable=True)
     source_cited = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+from pgvector.sqlalchemy import Vector
+
+class KBChunk(Base):
+    __tablename__ = "kb_chunks"
+    id = Column(String, primary_key=True)
+    text = Column(String, nullable=False)
+    source = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    topic = Column(String, nullable=False)
+    embedding = Column(Vector(768))

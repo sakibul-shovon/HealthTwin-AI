@@ -1,0 +1,14 @@
+[
+  {
+    "risky_drug": "ibuprofen",
+    "purpose": "pain",
+    "condition_or_drug": "warfarin",
+    "alternative": "Paracetamol 500 mg"
+  },
+  {
+    "risky_drug": "ibuprofen",
+    "purpose": "pain",
+    "condition_or_drug": "kidney_impaired",
+    "alternative": "Paracetamol 500 mg"
+  }
+]

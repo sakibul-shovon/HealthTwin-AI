@@ -1,0 +1,19 @@
+{
+  "brufen": "ibuprofen",
+  "advil": "ibuprofen",
+  "motrin": "ibuprofen",
+  "napa": "paracetamol",
+  "ace": "paracetamol",
+  "tylenol": "paracetamol",
+  "acetaminophen": "paracetamol",
+  "ecosprin": "aspirin",
+  "disprin": "aspirin",
+  "coumadin": "warfarin",
+  "jantoven": "warfarin",
+  "glucophage": "metformin",
+  "comet": "metformin",
+  "amoxil": "amoxicillin",
+  "moxatag": "amoxicillin",
+  "penicillin": "penicillin",
+  "amoxicillin": "penicillin" 
+}
