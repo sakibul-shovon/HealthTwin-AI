@@ -11,6 +11,7 @@ from app.agents.router import route
 from app.agents.composer import compose
 from app.agents.profile import run_profile_write
 from app.agents.care import set_reminder_from_nlu
+from app.memory.chat_store import save_turn
 
 _CARE_WRITE_INTENTS = {"SET_REMINDER"}
 
@@ -72,6 +73,30 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
     envelope["needs_confirmation"] = nlu.needs_confirmation
     if pending_id:
         envelope["pending_id"] = pending_id
+
+    try:
+        # Save user turn
+        save_turn(
+            db=db, 
+            household_id=household_id, 
+            role="user", 
+            text=req.transcript, 
+            language=nlu.language
+        )
+        
+        # Save assistant turn
+        save_turn(
+            db=db,
+            household_id=household_id,
+            role="assistant",
+            text=envelope.get("spoken", ""),
+            envelope=envelope,
+            intent=envelope.get("intent"),
+            member_focus=envelope.get("member_focus"),
+            language=envelope.get("language", "en")
+        )
+    except Exception as e:
+        print(f"Persistence error: {e}")
 
     return envelope
 

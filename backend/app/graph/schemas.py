@@ -118,3 +118,17 @@ class HouseholdSchema(BaseModel):
     
     class Config:
         from_attributes = True
+
+class ChatMessageSchema(BaseModel):
+    id: int
+    household_id: int
+    role: str
+    text: str
+    envelope: Optional[Dict] = None
+    intent: Optional[str] = None
+    member_focus: Optional[str] = None
+    language: str = "en"
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
