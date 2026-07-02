@@ -6,7 +6,7 @@ from app.graph.database import get_db
 from app.graph.models import Household
 from app.agents.safety import run_safety_check
 
-router = APIRouter(prefix="/api/_test", tags=["test"])
+router = APIRouter(prefix="/_test", tags=["test"])
 
 class SafetyCheckRequest(BaseModel):
     member: str

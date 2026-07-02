@@ -53,7 +53,7 @@ export default function MemberRail({ members, activeMember, onSelect }: Props) {
                   {m.role_label}
                 </p>
                 <p className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                  {m.age}y · {m.sex === "M" ? "Male" : "Female"}
+                  {m.age}y · {m.sex === "M" ? "Male" : m.sex === "F" ? "Female" : "Unknown"}
                 </p>
               </div>
             </div>

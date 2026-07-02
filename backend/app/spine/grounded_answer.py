@@ -4,11 +4,11 @@ Gate 3 (NLI) is intentionally skipped here — loading three ML models simultane
 exhausts Windows paging file on the demo host. Gate 1 deterministic rules handle
 safety verdicts; Gate 2 relevance scores serve as the grounding proxy for SAFE answers.
 """
-import os
 import math
 from typing import List, Optional
 from pydantic import BaseModel
 from app.spine.gate2_retrieval import retrieve
+from app.config import settings
 from groq import Groq
 
 
@@ -57,28 +57,31 @@ def grounded_explain(question: str, forced_facts: Optional[List[str]] = None) ->
     )
 
     # 2. Generate explanation via Groq Llama (or mock if no key)
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = settings.GROQ_API_KEY
     if not api_key:
         draft_text = evidence_texts[0]
     else:
-        client = Groq(api_key=api_key)
-        system_prompt = (
-            "You are a medical assistant. Answer the question using ONLY the provided sources. "
-            "Do not add outside knowledge. Keep it 1-3 sentences."
-        )
-        if forced_facts:
-            system_prompt += f"\n\nAlso state these facts exactly: {', '.join(forced_facts)}"
+        try:
+            client = Groq(api_key=api_key)
+            system_prompt = (
+                "You are a medical assistant. Answer the question using ONLY the provided sources. "
+                "Do not add outside knowledge. Keep it 1-3 sentences."
+            )
+            if forced_facts:
+                system_prompt += f"\n\nAlso state these facts exactly: {', '.join(forced_facts)}"
 
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Sources:\n{context_block}\n\nQuestion: {question}"},
-            ],
-            model="llama-3.3-70b-versatile",
-            temperature=0,
-            max_tokens=150,
-        )
-        draft_text = response.choices[0].message.content.strip()
+            response = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Sources:\n{context_block}\n\nQuestion: {question}"},
+                ],
+                model="llama-3.3-70b-versatile",
+                temperature=0,
+                max_tokens=150,
+            )
+            draft_text = response.choices[0].message.content.strip()
+        except Exception:
+            draft_text = evidence_texts[0]
 
     # 3. Use retrieval score as grounding proxy (no Gate 3 NLI to avoid OOM)
     top_chunk = retrieval_res.chunks[0]

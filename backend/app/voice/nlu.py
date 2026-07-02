@@ -6,9 +6,7 @@ from pydantic import BaseModel, Field
 from groq import Groq
 from app.graph.database import SessionLocal
 from app.graph.models import Household, Member
-from app.config import Settings
-
-settings = Settings()
+from app.config import settings
 
 class EntityInfo(BaseModel):
     type: Optional[str] = None

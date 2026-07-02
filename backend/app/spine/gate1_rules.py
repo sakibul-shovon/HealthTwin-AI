@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from pydantic import BaseModel
 from app.graph.schemas import MemberProfileSchema
 
@@ -101,6 +101,7 @@ def check_drug_safety(profile: MemberProfileSchema, drug: str, dose: Optional[st
                         severity=contra.get("severity", "high"),
                         source=contra.get("source", "WHO fact sheet")
                     ))
+                    break  # one conflict per contra entry is enough
                     
     # 4. Dose check
     if dose:

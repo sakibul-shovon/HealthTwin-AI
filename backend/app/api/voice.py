@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.graph.database import get_db
@@ -25,7 +25,7 @@ def _get_household_id(db: Session) -> int:
 
 
 class CommandRequest(BaseModel):
-    transcript: str
+    transcript: str = Field(..., max_length=1000)
     language: Optional[str] = None
 
 
@@ -39,7 +39,21 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
     nlu = parse_command(req.transcript, language_hint=req.language)
     household_id = _get_household_id(db)
 
-    raw = route(db, household_id, nlu, nlu.language)
+    try:
+        raw = route(db, household_id, nlu, nlu.language)
+    except Exception:
+        lang = nlu.language
+        return {
+            "verdict": "REFUSE",
+            "spoken": ("একটি সমস্যা হয়েছে। আবার চেষ্টা করুন।" if lang == "bn"
+                       else "Something went wrong processing your request. Please try again."),
+            "display": {"title": "Error", "conflict": None, "alternative": None,
+                        "detail": "Internal error", "member": None, "interpreted": None},
+            "evidence": {"source": None, "confidence": None, "grounding_score": None},
+            "actions": [],
+            "member_focus": None,
+            "language": lang,
+        }
 
     # Store pending write commands before composing
     pending_id = None

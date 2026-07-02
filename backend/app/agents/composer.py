@@ -43,7 +43,7 @@ def compose(envelope: dict, interpreted: str | None = None) -> dict:
             )
 
     # ── Emergency override ───────────────────────────────────────────────────
-    if verdict == "EMERGENCY":
+    if envelope.get("verdict") == "EMERGENCY":
         envelope["spoken"] = EMERGENCY_BN if language == "bn" else EMERGENCY_EN
 
     # ── Attach interpreted text ──────────────────────────────────────────────

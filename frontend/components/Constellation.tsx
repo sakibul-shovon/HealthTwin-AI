@@ -177,7 +177,7 @@ export default function Constellation({ members, focusedMember, activeMember, al
               transition={focused ? { duration: 1.2, repeat: Infinity } : {}}
               whileHover={{ scale: 1.1 }}
             >
-              {INITIALS[m.role_label] ?? m.role_label[0]}
+              {INITIALS[m.role_label] ?? m.role_label?.[0]?.toUpperCase() ?? "?"}
             </motion.div>
 
             {/* Name + age */}

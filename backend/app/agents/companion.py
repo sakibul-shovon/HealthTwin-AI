@@ -29,7 +29,7 @@ _REFUSE_BN = (
 )
 
 
-def run_companion(db: Session, household_id: int, question: str, language: str) -> dict:
+def run_companion(db: Session, household_id: int, question: str, language: str) -> dict:  # noqa: ARG001 household_id reserved for future member-context queries
     lang = language
 
     answer = grounded_explain(question)
@@ -37,7 +37,7 @@ def run_companion(db: Session, household_id: int, question: str, language: str) 
     # REFUSE if grounding is insufficient
     if answer.band == "LOW" or answer.evidence is None:
         spoken = _REFUSE_BN if lang == "bn" else _REFUSE_EN
-        _write_trace(db, question, passed=False)
+        _write_trace(db, passed=False)
         return {
             "verdict": "REFUSE",
             "spoken": spoken,
@@ -59,7 +59,7 @@ def run_companion(db: Session, household_id: int, question: str, language: str) 
 
     ev = answer.evidence
     disclaimer = _DISCLAIMER_BN if lang == "bn" else _DISCLAIMER_EN
-    detail = f"{answer.text}\n\n_{disclaimer}_"
+    detail = f"{answer.text}\n\n{disclaimer}"
     spoken = answer.text
 
     # Keep spoken under ~40 words for TTS comfort
@@ -67,7 +67,7 @@ def run_companion(db: Session, household_id: int, question: str, language: str) 
     if len(words) > 40:
         spoken = " ".join(words[:40]) + "…"
 
-    _write_trace(db, question, passed=True, source=ev.source, score=ev.grounding_score)
+    _write_trace(db, passed=True, source=ev.source, score=ev.grounding_score)
 
     return {
         "verdict": "INFO",
@@ -95,7 +95,6 @@ def run_companion(db: Session, household_id: int, question: str, language: str) 
 
 def _write_trace(
     db: Session,
-    question: str,
     passed: bool,
     source: str | None = None,
     score: float | None = None,

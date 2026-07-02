@@ -1,16 +1,16 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
-from app.voice.notifications import add_notification, get_notifications, clear_notifications
+from app.voice.notifications import get_notifications, clear_notifications
 from app.agents.care import notify_caregiver_inapp
 
 router = APIRouter(prefix="/care", tags=["care"])
 
 
 class NotifyRequest(BaseModel):
-    target: str
-    message: str
+    target: str = Field(..., max_length=100)
+    message: str = Field(..., max_length=500)
     from_member: Optional[str] = "HealthTwin"
     language: Optional[str] = "en"
 

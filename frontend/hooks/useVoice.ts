@@ -85,13 +85,21 @@ export function useVoice({
     const SpeechRec = getSpeechRecognition();
     setIsSTTSupported(!!SpeechRec);
     setIsTTSSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+  }, []);
 
+  // Create a fresh SpeechRecognition instance per call so language changes take effect
+  const startListening = useCallback((lang: "en" | "bn") => {
+    const SpeechRec = getSpeechRecognition();
     if (!SpeechRec) return;
+
+    // Abort any previous instance
+    recognitionRef.current?.abort();
 
     const rec = new SpeechRec();
     rec.continuous = false;
     rec.interimResults = false;
     rec.maxAlternatives = 1;
+    rec.lang = lang === "bn" ? "bn-BD" : "en-US";
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript.trim();
@@ -114,14 +122,7 @@ export function useVoice({
     };
 
     recognitionRef.current = rec;
-    return () => { rec.abort(); };
-  }, []);
-
-  const startListening = useCallback((lang: "en" | "bn") => {
-    const rec = recognitionRef.current;
-    if (!rec) return;
     try {
-      rec.lang = lang === "bn" ? "bn-BD" : "en-US";
       rec.start();
       setIsListening(true);
     } catch {

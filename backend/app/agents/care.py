@@ -22,7 +22,7 @@ from app.voice.nlu import NluResult
 def _normalise_time(raw: str) -> str:
     """Convert '9 PM', '9:00 PM', '21:00' → '21:00'; keep unknown as-is."""
     if not raw:
-        return "daily"
+        return "—"
     raw = raw.strip()
     # HH:MM already
     if re.match(r"^\d{1,2}:\d{2}$", raw):

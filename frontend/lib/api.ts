@@ -22,10 +22,6 @@ export async function getHealth() {
   }
 }
 
-export async function postVoiceCommand(transcript: string, language?: string) {
-  return post("/api/voice/command", { transcript, language });
-}
-
 export async function postVoiceConfirm(pending_id: string, confirmed: boolean) {
   return post("/api/voice/confirm", { pending_id, confirmed });
 }

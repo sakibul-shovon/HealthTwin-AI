@@ -6,7 +6,7 @@ when an API key is available; otherwise falls back to templates.
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -120,7 +120,7 @@ def _detect_hereditary(
                 db.query(models.Member)
                 .filter(
                     models.Member.household_id == household_id,
-                    models.Member.role_label.ilike("Child"),
+                    models.Member.age < 18,
                     models.Member.id.notin_(mids),
                 )
                 .all()

@@ -71,6 +71,9 @@ def load_corpus():
         print("BM25 index saved.")
         print(f"Done. {len(chunks)} chunks loaded.")
 
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 

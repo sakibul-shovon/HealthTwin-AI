@@ -217,12 +217,27 @@ export default function VerdictCard({ response, onAction }: Props) {
               </div>
             )}
 
-            {/* Detail paragraph */}
-            {response.display.detail && (
-              <p className="text-sm leading-relaxed" style={{ color: "var(--ink-soft)" }}>
-                {response.display.detail}
-              </p>
-            )}
+            {/* Detail paragraph(s) — split on \n\n; last para is disclaimer */}
+            {response.display.detail && (() => {
+              const isBn = response.language === "bn";
+              const paras = response.display.detail.split(/\n\n+/).filter(Boolean);
+              return (
+                <div className={`space-y-1.5 ${isBn ? "font-bn" : ""}`}>
+                  {paras.map((para, i) => {
+                    const isLast = i === paras.length - 1 && paras.length > 1;
+                    return (
+                      <p
+                        key={i}
+                        className={`text-sm leading-relaxed ${isLast ? "italic" : ""}`}
+                        style={{ color: isLast ? "var(--ink-faint)" : "var(--ink-soft)" }}
+                      >
+                        {para}
+                      </p>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* Action buttons */}
             {response.actions?.length > 0 && (

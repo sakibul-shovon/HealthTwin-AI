@@ -6,9 +6,11 @@ from app.api import router as api_router
 
 app = FastAPI(title="HealthTwin", version="0.1.0")
 
+# Guard: allow_credentials=True with wildcard origin is a security error
+_allowed_origins = [o for o in settings.ALLOWED_ORIGINS if o != "*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

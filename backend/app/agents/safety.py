@@ -1,3 +1,5 @@
+import copy
+import threading
 from typing import Optional
 from sqlalchemy.orm import Session
 from app.graph.crud import resolve_member, get_member_profile
@@ -6,8 +8,10 @@ from app.spine.gate1_rules import check_drug_safety
 from app.spine.grounded_answer import grounded_explain
 from app.agents.safety_copy import get_spoken_verdict
 
-# Simple in-memory cache for the flagship demo to avoid LLM calls
-_FLAGSHIP_CACHE = {}
+# In-memory cache for the flagship demo to avoid LLM calls on repeated queries.
+# Values stored as deep copies so callers cannot mutate cached state.
+_FLAGSHIP_CACHE: dict[str, dict] = {}
+_CACHE_LOCK = threading.Lock()
 
 def get_cache_key(household_id: int, member_label: str, drug: str, language: str) -> str:
     return f"{household_id}:{member_label}:{drug.lower()}:{language}"
@@ -41,18 +45,20 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
     
     # Check cache for flagship demo
     cache_key = get_cache_key(household_id, profile.role_label, drug, language)
-    if cache_key in _FLAGSHIP_CACHE:
+    with _CACHE_LOCK:
+        cached = _FLAGSHIP_CACHE.get(cache_key)
+    if cached is not None:
         # Log trace from cache
         trace = AgentTrace(
             member_id=member.id,
             intent="DRUG_SAFETY_CHECK",
-            gates_passed="1,2,3 (CACHED)",
-            grounding_score=_FLAGSHIP_CACHE[cache_key]["evidence"]["grounding_score"],
-            source_cited=_FLAGSHIP_CACHE[cache_key]["evidence"]["source"]
+            gates_passed={"gate1": True, "gate2": True, "gate3": False, "cached": True},
+            grounding_score=cached["evidence"]["grounding_score"],
+            source_cited=cached["evidence"]["source"]
         )
         db.add(trace)
         db.commit()
-        return _FLAGSHIP_CACHE[cache_key]
+        return copy.deepcopy(cached)
         
     # 2. Gate 1 - Deterministic Rule
     gate1_result = check_drug_safety(profile, drug, dose, purpose)
@@ -167,19 +173,18 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
     }
     
     # 6. Log trace
-    gates_used = "1,2,3" if explanation is not None else "1"
     trace = AgentTrace(
         member_id=member.id,
         intent="DRUG_SAFETY_CHECK",
-        gates_passed=gates_used,
+        gates_passed={"gate1": True, "gate2": explanation is not None, "gate3": False},
         grounding_score=grounding_score,
         source_cited=evidence_source
     )
     db.add(trace)
     db.commit()
-    
-    # 7. Cache flagship verdict if UNSAFE to avoid repeating
-    if gate1_result.verdict == "UNSAFE":
-        _FLAGSHIP_CACHE[cache_key] = envelope
-        
+
+    # 7. Cache all verdicts as deep copies to avoid caller mutation corrupting cache
+    with _CACHE_LOCK:
+        _FLAGSHIP_CACHE[cache_key] = copy.deepcopy(envelope)
+
     return envelope

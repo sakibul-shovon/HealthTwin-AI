@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { getHousehold, post, postVoiceConfirm, postCareNotify } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
 import { ResponseEnvelope } from "@/lib/types";
@@ -27,6 +27,9 @@ export default function Home() {
     addNotification,
     dismissNotification,
   } = useTwinStore();
+
+  // Used to cancel the 8s failsafe timeout when speech ends naturally (BUG-03)
+  const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isProcessing = orbState === "thinking" || orbState === "speaking";
 
@@ -57,9 +60,15 @@ export default function Home() {
         // Speak the verdict
         const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? lang);
         if (utterance) {
-          utterance.onend = () => setOrbState("idle");
-          // Failsafe: reset after max 8s even if onend never fires
-          setTimeout(() => setOrbState("idle"), 8000);
+          // Failsafe clears itself when onend fires naturally (BUG-03)
+          speakTimeoutRef.current = setTimeout(() => setOrbState("idle"), 8000);
+          utterance.onend = () => {
+            if (speakTimeoutRef.current) {
+              clearTimeout(speakTimeoutRef.current);
+              speakTimeoutRef.current = null;
+            }
+            setOrbState("idle");
+          };
         } else {
           const wordCount = envelope.spoken.split(" ").length;
           setTimeout(() => setOrbState("idle"), Math.max(2500, wordCount * 350));
@@ -82,8 +91,8 @@ export default function Home() {
         setTimeout(() => setOrbState("idle"), 2000);
       },
       onListeningEnd: () => {
-        // If listening ends without a transcript (e.g. no-speech), go back to idle
-        if (orbState === "listening") setOrbState("idle");
+        // Read current orbState from store (not closure) to avoid stale value (BUG-02)
+        if (useTwinStore.getState().orbState === "listening") setOrbState("idle");
       },
     });
 
@@ -121,11 +130,16 @@ export default function Home() {
   }) {
     if (action.type === "notify_caregiver" && action.target) {
       const result = await postCareNotify(action.target, "Safety alert from HealthTwin");
-      if (result?.notification) addNotification(result.notification);
-      const msg = `Notifying ${action.target}.`;
-      setOrbState("speaking");
-      speak(msg, "en");
-      setTimeout(() => setOrbState("idle"), 2500);
+      if (result?.notification) {
+        addNotification(result.notification);
+        const msg = `Notifying ${action.target}.`;
+        setOrbState("speaking");
+        speak(msg, "en");
+        setTimeout(() => setOrbState("idle"), 2500);
+      } else {
+        setOrbState("error");
+        setTimeout(() => setOrbState("idle"), 2000);
+      }
     }
     if (action.pending_id) {
       const result = await postVoiceConfirm(action.pending_id, true);
@@ -237,10 +251,10 @@ export default function Home() {
       )}
 
       {/* ── Body ────────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Member Rail */}
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        {/* Left: Member Rail — hidden on mobile */}
         <div
-          className="w-56 shrink-0 overflow-y-auto"
+          className="hidden md:block w-56 shrink-0 overflow-y-auto"
           style={{ borderRight: "1px solid var(--surface-sunk)" }}
         >
           {members.length > 0 ? (
@@ -259,9 +273,9 @@ export default function Home() {
         </div>
 
         {/* Center: Living Twin */}
-        <div className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-between py-4 md:py-6 px-4 overflow-hidden min-h-0">
           {/* Constellation + Orb */}
-          <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0">
             <div className="relative">
               {members.length > 0 && (
                 <Constellation
@@ -307,13 +321,15 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right: Verdict Panel */}
+        {/* Right: Verdict Panel — bottom sheet on mobile, sidebar on desktop */}
         <div
-          className="w-80 shrink-0 overflow-y-auto p-4"
-          style={{ borderLeft: "1px solid var(--surface-sunk)" }}
+          className="verdict-panel-mobile md:w-80 md:shrink-0 md:overflow-y-auto p-4"
+          style={{
+            borderTop: "1px solid var(--surface-sunk)",
+          }}
         >
           <h2
-            className="text-xs font-semibold uppercase tracking-widest mb-3"
+            className="text-xs font-semibold uppercase tracking-widest mb-3 md:block hidden"
             style={{ color: "var(--ink-faint)" }}
           >
             Verdict

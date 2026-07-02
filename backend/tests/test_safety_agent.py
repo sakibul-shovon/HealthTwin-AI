@@ -91,4 +91,4 @@ def test_safety_agent_caching(db, rahman_household_id):
     assert envelope["verdict"] == "UNSAFE"
     # We can check trace to see it says CACHED
     last_trace = db.query(AgentTrace).order_by(AgentTrace.id.desc()).first()
-    assert "CACHED" in last_trace.gates_passed
+    assert last_trace.gates_passed.get("cached") is True

@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from . import models, schemas
 from typing import Optional
 
-def get_household(db: Session, household_id: int) -> schemas.HouseholdSchema:
+def get_household(db: Session, household_id: int) -> Optional[schemas.HouseholdSchema]:
     household = db.query(models.Household).filter(models.Household.id == household_id).first()
     if not household:
         return None
@@ -128,7 +128,13 @@ def update_member_flags(db: Session, member_id: int, **flags) -> Optional[models
     db.refresh(member)
     return member
 
-def set_caregiver(db: Session, from_member_id: int, to_member_id: int, is_caregiver: bool = True):
+def set_caregiver(
+    db: Session,
+    from_member_id: int,
+    to_member_id: int,
+    is_caregiver: bool = True,
+    relationship_type: models.RelationshipType = models.RelationshipType.parent_of,
+):
     rel = db.query(models.Relationship).filter(
         models.Relationship.from_member_id == from_member_id,
         models.Relationship.to_member_id == to_member_id,
@@ -139,7 +145,7 @@ def set_caregiver(db: Session, from_member_id: int, to_member_id: int, is_caregi
         rel = models.Relationship(
             from_member_id=from_member_id,
             to_member_id=to_member_id,
-            type=models.RelationshipType.parent_of,
+            type=relationship_type,
             caregiver=is_caregiver,
         )
         db.add(rel)
