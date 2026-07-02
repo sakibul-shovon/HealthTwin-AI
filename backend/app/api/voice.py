@@ -76,6 +76,7 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
     return envelope
 
 
+
 @router.post("/confirm")
 def voice_confirm(req: ConfirmRequest, db: Session = Depends(get_db)):
     nlu = retrieve_pending(req.pending_id)

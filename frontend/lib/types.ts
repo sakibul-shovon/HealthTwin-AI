@@ -80,3 +80,11 @@ export interface Household {
   name: string
   members: HouseholdMember[]
 }
+
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+  envelope?: ResponseEnvelope
+  timestamp: number
+}

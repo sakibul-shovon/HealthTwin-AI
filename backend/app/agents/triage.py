@@ -15,29 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.graph.crud import resolve_member
-
-# ── Red-flag rules (CONVENTIONS §9) ─────────────────────────────────────────
-# Each entry: (regex_pattern, human_readable_label)
-_RED_FLAG_RULES: list[tuple[str, str]] = [
-    # Chest / cardiac
-    (r"chest\s+pain|chest\s+pressure|chest\s+tight|heart\s+attack|বুকে\s+ব্যথা|বুকে\s+চাপ|হার্ট\s+অ্যাটাক", "chest pain"),
-    # Breathing
-    (r"can'?t\s+breath|cannot\s+breath|difficulty\s+breath|shortness\s+of\s+breath|not\s+breath|struggling\s+to\s+breath|শ্বাস\s+নিতে\s+পার|শ্বাস\s+কষ্ট|শ্বাস\s+বন্ধ", "breathing difficulty"),
-    # Stroke signs — use loose patterns to catch "face is drooping", "speech is slurred", etc.
-    (r"face.*?droop|drooping|facial.*?droop|one.sided\s+weak|arm\s+weak|slurred|speech.*?slur|sudden\s+confusion|stroke|মুখ\s+বাঁকা|কথা\s+জড়িয়ে|একদিক\s+দুর্বল", "stroke signs"),
-    # Bleeding
-    (r"severe\s+bleed|uncontrolled\s+bleed|bleed\s+heavily|blood\s+gush|প্রচুর\s+রক্ত|রক্তপাত\s+বন্ধ\s+হচ্ছে\s+না", "severe bleeding"),
-    # Unconsciousness
-    (r"unconscious|unresponsive|passed\s+out|won'?t\s+wake|not\s+waking|collapse|অজ্ঞান|সংজ্ঞাহীন|জ্ঞান\s+নেই", "unconsciousness"),
-    # Seizure
-    (r"seizure|convuls|fitting|খিঁচুনি", "seizure"),
-    # Cyanosis
-    (r"blue\s+lips?|lips?\s+blue|cyanosis|ঠোঁট\s+নীল", "blue lips / cyanosis"),
-    # Meningitis (infant fever + danger signs)
-    (r"stiff\s+neck|neck\s+stiff|non.blanching\s+rash|গলা\s+শক্ত|গলা\s+ব্যথা.*শিশু|শিশু.*গলা\s+শক্ত", "meningitis signs"),
-    # Anaphylaxis
-    (r"throat\s+swell|tongue\s+swell|anaphylax|severe\s+allergic|can'?t\s+swallow|গলা\s+ফুলে|জিহ্বা\s+ফুলে|মারাত্মক\s+অ্যালার্জি", "severe allergic reaction"),
-]
+from app.spine.emergency import scan_red_flags
 
 _URGENCY_LABELS = ("Emergency", "Urgent", "Moderate", "Low")
 
@@ -88,17 +66,6 @@ def _extract_temp_fahrenheit(text: str) -> Optional[float]:
             return val * 9 / 5 + 32   # Celsius
         if 97.0 <= val <= 110.0:
             return val                  # Fahrenheit
-    return None
-
-
-# ── Red-flag scanner (deterministic — runs FIRST, no LLM) ────────────────────
-
-def _scan_red_flags(symptom_text: str) -> Optional[str]:
-    """Returns the human-readable label of the first red flag hit, or None."""
-    tl = symptom_text.lower()
-    for pattern, label in _RED_FLAG_RULES:
-        if re.search(pattern, tl):
-            return label
     return None
 
 
@@ -156,7 +123,7 @@ def run_triage(
     num = settings.EMERGENCY_NUMBER
 
     # ── Step 1: Red-flag scan (DETERMINISTIC — no LLM, always first) ─────────
-    red_flag = _scan_red_flags(symptom_text)
+    red_flag = scan_red_flags(symptom_text)
     if red_flag:
         if language == "bn":
             spoken = (

@@ -49,17 +49,30 @@ def resolve_member(db: Session, household_id: int, spoken_name: str) -> Optional
     # Basic alias map (extend as needed)
     aliases = {
         "father": "Baba",
+        "dad": "Baba",
         "baba": "Baba",
         "বাবা": "Baba",
+        "আব্বা": "Baba",
+        "আব্বু": "Baba",
         "mother": "Ma",
+        "mom": "Ma",
+        "mum": "Ma",
+        "mama": "Ma",
         "ma": "Ma",
         "মা": "Ma",
+        "আম্মা": "Ma",
+        "আম্মু": "Ma",
         "son": "Child",
+        "daughter": "Child",
         "child": "Child",
+        "kid": "Child",
         "ছেলে": "Child",
+        "মেয়ে": "Child",
         "self": "Self",
         "me": "Self",
-        "আমি": "Self"
+        "myself": "Self",
+        "আমি": "Self",
+        "আমার": "Self",
     }
     
     # Direct match first, then fallback to alias
@@ -71,6 +84,65 @@ def resolve_member(db: Session, household_id: int, spoken_name: str) -> Optional
     ).first()
     
     return member
+
+def member_health_summary(db: Session, household_id: int, spoken_name: str, language: str = "en") -> Optional[dict]:
+    """Return a formatted health summary for a named member, or None if not found."""
+    member = resolve_member(db, household_id, spoken_name)
+    if not member:
+        return None
+
+    meds = ", ".join(f"{m.name} {m.dose}" for m in member.medications) if member.medications else "none"
+    conditions = ", ".join(c.name for c in member.conditions) if member.conditions else "none"
+    flags = []
+    if member.kidney_impaired:
+        flags.append("kidney impaired")
+    if member.liver_impaired:
+        flags.append("liver impaired")
+    if member.pregnant:
+        flags.append("pregnant")
+    recent = sorted(member.symptoms, key=lambda s: s.logged_at, reverse=True)[:3]
+    symptoms_text = ", ".join(s.symptom for s in recent) if recent else "none recorded"
+
+    if language == "bn":
+        spoken = (
+            f"{member.role_label} ({member.display_name}), বয়স {member.age}। "
+            f"রোগ: {conditions}। ওষুধ: {meds}। সাম্প্রতিক উপসর্গ: {symptoms_text}।"
+        )
+        if flags:
+            spoken += f" বিশেষ তথ্য: {', '.join(flags)}।"
+    else:
+        spoken = (
+            f"{member.role_label} ({member.display_name}), age {member.age}. "
+            f"Conditions: {conditions}. Medications: {meds}. Recent symptoms: {symptoms_text}."
+        )
+        if flags:
+            spoken += f" Flags: {', '.join(flags)}."
+
+    detail_lines = [
+        f"**{member.role_label}** — {member.display_name}, {member.age} yrs, {member.sex}",
+        f"Conditions: {conditions}",
+        f"Medications: {meds}",
+        f"Recent symptoms: {symptoms_text}",
+    ]
+    if flags:
+        detail_lines.append(f"Flags: {', '.join(flags)}")
+
+    return {
+        "verdict": "INFO",
+        "spoken": spoken,
+        "display": {
+            "title": f"{member.role_label}'s Health Summary",
+            "conflict": None,
+            "alternative": None,
+            "detail": "\n".join(detail_lines),
+            "member": member.role_label,
+        },
+        "evidence": {"source": "Household profile", "confidence": 1.0, "grounding_score": 1.0},
+        "actions": [],
+        "member_focus": member.role_label,
+        "language": language,
+    }
+
 
 def add_member(db: Session, household_id: int, data: dict) -> models.Member:
     member = models.Member(

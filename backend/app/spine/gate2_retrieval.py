@@ -48,18 +48,56 @@ class RetrievalResult(BaseModel):
     top_score: float
 
 
+def _bm25_only_retrieve(query: str, k: int, db) -> RetrievalResult:
+    """BM25-only retrieval path — no PyTorch required."""
+    bm25_data = get_bm25()
+    if not bm25_data:
+        return RetrievalResult(chunks=[], sufficient=False, top_score=0.0)
+
+    bm25 = bm25_data["index"]
+    chunk_ids = bm25_data["chunk_ids"]
+    tokenized_query = tokenize(query)
+    scores = bm25.get_scores(tokenized_query)
+
+    top_idx = scores.argsort()[-(k * 2):][::-1]
+    hits = [(chunk_ids[i], float(scores[i])) for i in top_idx if scores[i] > 0]
+
+    if not hits:
+        return RetrievalResult(chunks=[], sufficient=False, top_score=0.0)
+
+    hit_ids = [h[0] for h in hits[:k]]
+    score_map = {h[0]: h[1] for h in hits}
+
+    chunks = db.query(KBChunk).filter(KBChunk.id.in_(hit_ids)).all()
+    chunks.sort(key=lambda c: score_map.get(c.id, 0), reverse=True)
+
+    top_score = score_map.get(chunks[0].id, 0.0) if chunks else 0.0
+    # BM25 scores vary; treat > 1.0 as sufficient for this small corpus
+    sufficient = top_score > 1.0
+
+    retrieved_chunks = [
+        RetrievedChunk(text=c.text, source=c.source, url=c.url, score=score_map.get(c.id, 0.0))
+        for c in chunks[:k]
+    ]
+    return RetrievalResult(chunks=retrieved_chunks, sufficient=sufficient, top_score=top_score)
+
+
 def retrieve(query: str, k: int = 6) -> RetrievalResult:
     db = SessionLocal()
     try:
-        # 1. Dense search
-        embedder = get_embedding_model()
-        query_embedding = embedder.encode(query, normalize_embeddings=True).tolist()
+        # Try full pipeline (dense + sparse + rerank).
+        # Falls back to BM25-only if PyTorch can't load (paging file / OOM).
+        try:
+            embedder = get_embedding_model()
+            query_embedding = embedder.encode(query, normalize_embeddings=True).tolist()
+            dense_results = db.query(KBChunk).order_by(
+                KBChunk.embedding.cosine_distance(query_embedding)
+            ).limit(k * 2).all()
+        except Exception:
+            # PyTorch / OpenBLAS OOM — fall back to BM25 only
+            return _bm25_only_retrieve(query, k, db)
 
-        dense_results = db.query(KBChunk).order_by(
-            KBChunk.embedding.cosine_distance(query_embedding)
-        ).limit(k * 2).all()
-
-        # 2. Sparse search
+        # Sparse search
         bm25_data = get_bm25()
         sparse_hits = []
         if bm25_data:
@@ -76,7 +114,7 @@ def retrieve(query: str, k: int = 6) -> RetrievalResult:
         if sparse_hits:
             sparse_chunks = db.query(KBChunk).filter(KBChunk.id.in_(sparse_hits)).all()
 
-        # 3. RRF fusion
+        # RRF fusion
         unique_chunks = {c.id: c for c in dense_results + sparse_chunks}
         rrf_scores = {c_id: 0.0 for c_id in unique_chunks}
         rrf_k = 60
@@ -85,7 +123,7 @@ def retrieve(query: str, k: int = 6) -> RetrievalResult:
             rrf_scores[c.id] += 1.0 / (rrf_k + rank + 1)
 
         sparse_ranked = sorted(
-            [c for c in sparse_chunks],
+            sparse_chunks,
             key=lambda c: sparse_hits.index(c.id) if c.id in sparse_hits else len(sparse_hits)
         )
         for rank, c in enumerate(sparse_ranked):
@@ -98,23 +136,29 @@ def retrieve(query: str, k: int = 6) -> RetrievalResult:
         if not top_candidates:
             return RetrievalResult(chunks=[], sufficient=False, top_score=0.0)
 
-        # 4. Cross-encoder reranking
-        reranker = get_rerank_model()
-        pairs = [[query, c.text] for c in top_candidates]
-        cross_scores = reranker.predict(pairs)
-
-        scored_candidates = sorted(
-            zip(top_candidates, cross_scores), key=lambda x: x[1], reverse=True
-        )[:k]
-
-        # 5. Sufficiency gate (ms-marco scores are logits; > 0 is a reasonable threshold)
-        top_score = float(scored_candidates[0][1]) if scored_candidates else 0.0
-        sufficient = top_score > 0.0
-
-        retrieved_chunks = [
-            RetrievedChunk(text=c.text, source=c.source, url=c.url, score=float(score))
-            for c, score in scored_candidates
-        ]
+        # Cross-encoder reranking
+        try:
+            reranker = get_rerank_model()
+            pairs = [[query, c.text] for c in top_candidates]
+            cross_scores = reranker.predict(pairs)
+            scored_candidates = sorted(
+                zip(top_candidates, cross_scores), key=lambda x: x[1], reverse=True
+            )[:k]
+            top_score = float(scored_candidates[0][1]) if scored_candidates else 0.0
+            sufficient = top_score > 0.0
+            retrieved_chunks = [
+                RetrievedChunk(text=c.text, source=c.source, url=c.url, score=float(score))
+                for c, score in scored_candidates
+            ]
+        except Exception:
+            # Reranker OOM — use RRF scores directly
+            scored_candidates = top_candidates[:k]
+            top_score = rrf_scores.get(scored_candidates[0].id, 0.0) if scored_candidates else 0.0
+            sufficient = top_score > 0.005
+            retrieved_chunks = [
+                RetrievedChunk(text=c.text, source=c.source, url=c.url, score=rrf_scores.get(c.id, 0.0))
+                for c in scored_candidates
+            ]
 
         return RetrievalResult(chunks=retrieved_chunks, sufficient=sufficient, top_score=top_score)
     finally:

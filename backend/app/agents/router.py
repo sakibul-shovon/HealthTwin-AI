@@ -6,8 +6,64 @@ from app.agents.triage import run_triage
 from app.agents.care import query_caregiver
 from app.agents.companion import run_companion
 from app.graph.crud import get_household
+from app.graph.models import Member
+from app.spine.emergency import scan_red_flags, build_emergency_envelope
 
 WRITE_INTENTS = {"ADD_MEMBER", "UPDATE_MEMBER", "UPDATE_MEDICATION", "LOG_SYMPTOM", "SET_REMINDER", "ASSIGN_CAREGIVER"}
+
+# Words in a transcript that map to a household role_label
+_MEMBER_ALIASES: dict[str, str] = {
+    "baba": "Baba", "father": "Baba", "dad": "Baba",
+    "বাবা": "Baba", "আব্বা": "Baba", "আব্বু": "Baba",
+    "ma": "Ma", "mom": "Ma", "mum": "Ma", "mother": "Ma", "mama": "Ma",
+    "মা": "Ma", "আম্মা": "Ma", "আম্মু": "Ma",
+    "child": "Child", "son": "Child", "daughter": "Child", "kid": "Child",
+    "ছেলে": "Child", "মেয়ে": "Child",
+    "self": "Self", "me": "Self", "myself": "Self",
+    "আমি": "Self",
+}
+
+
+def _extract_members_from_text(text: str) -> list[str]:
+    """Return all unique role_labels found as whole words in the text (excludes common pronouns)."""
+    import re
+    _SKIP = {"me", "my", "myself"}  # too common as English pronouns
+    lower = text.lower()
+    found: list[str] = []
+    seen: set[str] = set()
+    for alias, label in _MEMBER_ALIASES.items():
+        if alias in _SKIP:
+            continue
+        if re.search(r'\b' + re.escape(alias) + r'\b', lower) and label not in seen:
+            found.append(label)
+            seen.add(label)
+    return found
+
+
+def _build_member_context(db: Session, household_id: int, role_labels: list[str]) -> str:
+    """Fetch member profiles from DB and format them as LLM context (eager-loads relationships)."""
+    from sqlalchemy.orm import joinedload
+    from app.graph.models import Medication, Condition
+    lines = []
+    for label in role_labels:
+        m = (
+            db.query(Member)
+            .options(joinedload(Member.medications), joinedload(Member.conditions))
+            .filter(Member.household_id == household_id, Member.role_label.ilike(label))
+            .first()
+        )
+        if not m:
+            continue
+        meds = ", ".join(f"{med.name} {med.dose}" for med in m.medications) or "none"
+        conditions = ", ".join(c.name for c in m.conditions) or "none"
+        flags = [f for f, v in [("kidney impaired", m.kidney_impaired),
+                                  ("liver impaired", m.liver_impaired),
+                                  ("pregnant", m.pregnant)] if v]
+        line = f"- {m.role_label} ({m.display_name}), age {m.age}: conditions={conditions}; meds={meds}"
+        if flags:
+            line += f"; flags={', '.join(flags)}"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def _interpreted_text(nlu: NluResult) -> str:
@@ -74,14 +130,26 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
     intent = nlu.intent
     entity = nlu.entity
 
+    # ── Cross-cutting emergency pre-filter ───────────────────────────────────
+    # Runs before any intent dispatch — catches red flags regardless of intent.
+    red_flag = scan_red_flags(nlu.raw_transcript or "")
+    if red_flag:
+        return build_emergency_envelope(red_flag, nlu.member, language)
+
     # ── LIVE: Drug safety check ──────────────────────────────────────────────
     if intent == "DRUG_SAFETY_CHECK":
         drug = entity.name if entity else None
         if not drug:
             spoken = "কোন ওষুধের কথা বলছেন?" if language == "bn" else "Which medicine did you want to check?"
             return _refuse(spoken, language, nlu)
+        # No member specified → general drug question, route to Companion
+        if not nlu.member:
+            question = nlu.raw_transcript or f"Is {drug} safe?"
+            result = run_companion(db, household_id, question, language)
+            result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+            return result
         dose = entity.dose if entity else None
-        envelope = run_safety_check(db, household_id, nlu.member or "", drug, dose=dose, language=language)
+        envelope = run_safety_check(db, household_id, nlu.member, drug, dose=dose, language=language)
         if isinstance(envelope, dict):
             envelope.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
         return envelope
@@ -141,8 +209,31 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
         question = nlu.raw_transcript or (
             ((entity.name or "") + " " + (entity.value or "")).strip() if entity else ""
         ) or "health question"
-        result = run_companion(db, household_id, question, language)
+
+        # Inject household member profiles as LLM context when members are mentioned
+        candidates = ([nlu.member] if nlu.member else []) or _extract_members_from_text(nlu.raw_transcript or "")
+        ctx = _build_member_context(db, household_id, candidates) if candidates else ""
+
+        result = run_companion(db, household_id, question, language, member_context=ctx)
         result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+        if result.get("verdict") == "REFUSE":
+            spoken = (
+                "আমি HealthTwin — আপনার পারিবারিক স্বাস্থ্য সহকারী। "
+                "জিজ্ঞেস করুন: ওষুধ নিরাপদ কিনা, উপসর্গ, বা পারিবারিক স্বাস্থ্য প্যাটার্ন।"
+            ) if language == "bn" else (
+                "I'm HealthTwin, your family health assistant. "
+                "Try: 'Is ibuprofen safe for Baba?', 'Check for household patterns', "
+                "or 'Is paracetamol safe for children?'"
+            )
+            return {
+                "verdict": "INFO",
+                "spoken": spoken,
+                "display": {"title": "HealthTwin Assistant", "conflict": None,
+                            "alternative": None, "detail": spoken, "member": None,
+                            "interpreted": question},
+                "evidence": {"source": None, "confidence": None, "grounding_score": None},
+                "actions": [], "member_focus": None, "language": language,
+            }
         return result
 
     # ── HOUSEHOLD_STATUS: simple summary ────────────────────────────────────
@@ -161,7 +252,43 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
             "language": language,
         }
 
-    # ── UNKNOWN fallback ────────────────────────────────────────────────────
-    spoken = ("বুঝতে পারিনি — সদস্যের নাম আর ওষুধের নাম বলুন।" if language == "bn"
-              else "I didn't catch that — try saying the member's name and the medicine.")
-    return _refuse(spoken, language, nlu)
+    # ── UNKNOWN fallback: Companion with member context → friendly intro ─────
+    question = nlu.raw_transcript or ""
+
+    if question.strip():
+        candidates = ([nlu.member] if nlu.member else []) or _extract_members_from_text(question)
+        ctx = _build_member_context(db, household_id, candidates) if candidates else ""
+        result = run_companion(db, household_id, question, language, member_context=ctx)
+        if result.get("verdict") != "REFUSE":
+            result.setdefault("display", {})["interpreted"] = question
+            return result
+
+    # Truly unknown — return a helpful intro instead of a cryptic error
+    if language == "bn":
+        spoken = (
+            "আমি HealthTwin — আপনার পারিবারিক স্বাস্থ্য সহকারী। "
+            "আমাকে জিজ্ঞেস করুন: ওষুধ নিরাপদ কিনা, উপসর্গ কেমন, "
+            "বা পরিবারের কোনো সদস্যের জন্য কী করা উচিত।"
+        )
+    else:
+        spoken = (
+            "I'm HealthTwin, your family health assistant. "
+            "Try asking: 'Is ibuprofen safe for Baba?', "
+            "'Check for household patterns', or 'Who is Baba's caregiver?'"
+        )
+    return {
+        "verdict": "INFO",
+        "spoken": spoken,
+        "display": {
+            "title": "HealthTwin Assistant",
+            "conflict": None,
+            "alternative": None,
+            "detail": spoken,
+            "member": None,
+            "interpreted": nlu.raw_transcript or "",
+        },
+        "evidence": {"source": None, "confidence": None, "grounding_score": None},
+        "actions": [],
+        "member_focus": None,
+        "language": language,
+    }

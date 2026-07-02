@@ -64,7 +64,22 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
     api_key = settings.GROQ_API_KEY
     if not api_key:
         # Fallback Mock for testing (no GROQ key)
-        tl = transcript.lower()
+        tl = transcript.lower().strip()
+
+        # ── Greetings ────────────────────────────────────────────────────────
+        _GREETINGS = ["hello", "hi", "hey", "good morning", "good afternoon",
+                      "good evening", "howdy", "salam", "assalamualaikum",
+                      "হ্যালো", "হেলো", "আসসালামুয়ালাইকুম"]
+        if tl in _GREETINGS or any(tl.startswith(g) for g in _GREETINGS):
+            return NluResult(intent="GREETING", language=detected_lang, confidence=1.0, raw_transcript=transcript)
+
+        # ── Help / capability queries ─────────────────────────────────────────
+        _HELP_KW = ["help", "what can you do", "how do i use", "what do you do",
+                    "capabilities", "তুমি কী করতে পারো", "কী করতে পারো"]
+        if any(kw in tl for kw in _HELP_KW):
+            return NluResult(intent="HELP", language=detected_lang, confidence=1.0, raw_transcript=transcript)
+
+        # ── Drug safety check ─────────────────────────────────────────────────
         if "ibuprofen" in tl or "ওষুধ" in transcript:
             return NluResult(
                 intent="DRUG_SAFETY_CHECK",
@@ -74,7 +89,8 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
                 entity=EntityInfo(type="medication", name="ibuprofen"),
                 raw_transcript=transcript,
             )
-        # Generic medication-write pattern: "add X to/for Y" or drug name in known list
+
+        # ── Medication writes ─────────────────────────────────────────────────
         _MOCK_DRUGS = {
             "losartan": ("Ma", "losartan", "50mg"),
             "metformin": ("Ma", "metformin", "500mg"),
@@ -82,7 +98,6 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
         }
         for drug, (default_member, drug_name, default_dose) in _MOCK_DRUGS.items():
             if drug in tl:
-                # Resolve member from transcript if mentioned
                 member_label = default_member
                 for alias, label in [("baba", "Baba"), ("ma", "Ma"), ("self", "Self"), ("child", "Child")]:
                     if alias in tl:
@@ -98,11 +113,13 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
                     entity=EntityInfo(type="medication", name=drug_name, dose=default_dose),
                     raw_transcript=transcript,
                 )
-        # General health questions — recognise key corpus topics
+
+        # ── General health questions ──────────────────────────────────────────
         _HEALTH_Q_KEYWORDS = [
             "empty stomach", "paracetamol safe", "dengue", "dengue fever",
             "penicillin", "allergy", "warfarin", "blood thinner",
             "what is", "how to", "is it safe", "can i", "should i",
+            "safe for", "safe to", "fever", "headache", "pain",
         ]
         if any(kw in tl for kw in _HEALTH_Q_KEYWORDS) and "add" not in tl and "remind" not in tl:
             return NluResult(
@@ -111,7 +128,9 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
                 confidence=0.8,
                 raw_transcript=transcript,
             )
-        return NluResult(intent="UNKNOWN", language=detected_lang, confidence=0.0, raw_transcript=transcript)
+
+        # ── Everything else → treat as a general question for Companion ───────
+        return NluResult(intent="GENERAL_HEALTH_Q", language=detected_lang, confidence=0.5, raw_transcript=transcript)
 
     # Real LLM call
     client = Groq(api_key=api_key)
