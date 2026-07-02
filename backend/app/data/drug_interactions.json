@@ -33,5 +33,75 @@
     "severity": "moderate",
     "mechanism": "increased bleeding risk (SSRI + NSAID)",
     "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "warfarin",
+    "drug_b": "naproxen",
+    "severity": "high",
+    "mechanism": "increased bleeding risk (NSAID + anticoagulant)",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "warfarin",
+    "drug_b": "diclofenac",
+    "severity": "high",
+    "mechanism": "increased bleeding risk (NSAID + anticoagulant)",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "warfarin",
+    "drug_b": "metronidazole",
+    "severity": "high",
+    "mechanism": "metronidazole inhibits warfarin metabolism (CYP2C9), increasing INR and bleeding risk",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "metformin",
+    "drug_b": "alcohol",
+    "severity": "moderate",
+    "mechanism": "increased risk of lactic acidosis with heavy alcohol use",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "amlodipine",
+    "drug_b": "simvastatin",
+    "severity": "moderate",
+    "mechanism": "amlodipine inhibits CYP3A4, increasing simvastatin levels and myopathy risk — limit simvastatin to 20mg/day",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "lisinopril",
+    "drug_b": "ibuprofen",
+    "severity": "moderate",
+    "mechanism": "NSAIDs reduce antihypertensive effect of ACE inhibitors; combined use increases acute kidney injury risk",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "aspirin",
+    "drug_b": "ibuprofen",
+    "severity": "moderate",
+    "mechanism": "ibuprofen may block aspirin antiplatelet effect when taken concurrently; take aspirin 2 hours before ibuprofen",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "metformin",
+    "drug_b": "furosemide",
+    "severity": "moderate",
+    "mechanism": "furosemide increases metformin plasma levels; monitor renal function",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "amlodipine",
+    "drug_b": "grapefruit",
+    "severity": "moderate",
+    "mechanism": "grapefruit juice inhibits CYP3A4, increasing amlodipine blood levels and hypotension risk",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "fluoxetine",
+    "drug_b": "tramadol",
+    "severity": "high",
+    "mechanism": "serotonin syndrome risk (SSRI + opioid with serotonergic activity); avoid combination",
+    "source": "DrugBank subset"
   }
 ]

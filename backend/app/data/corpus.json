@@ -47,5 +47,110 @@
     "source": "WHO Fact Sheet on Antibiotic Safety",
     "url": "https://www.who.int/docs/antibiotics",
     "topic": "penicillin allergy, amoxicillin"
+  },
+  {
+    "id": "chunk_dengue_detail_1",
+    "text": "Dengue fever is caused by the dengue virus transmitted by Aedes aegypti mosquitoes. Symptoms include sudden high fever (39-40 degrees Celsius), severe headache, pain behind the eyes, muscle and joint pain, nausea, and rash. Most patients recover in 1-2 weeks with rest and oral fluids. Avoid ibuprofen and aspirin during dengue — NSAIDs increase bleeding risk.",
+    "source": "WHO Dengue Fact Sheet",
+    "url": "https://www.who.int/news-room/fact-sheets/detail/dengue-and-severe-dengue",
+    "topic": "dengue, symptoms, treatment"
+  },
+  {
+    "id": "chunk_dengue_warning_signs",
+    "text": "Dengue warning signs requiring immediate hospital care: abdominal pain or tenderness, persistent vomiting, clinical fluid accumulation, mucosal bleeding, lethargy or restlessness, liver enlargement, and rapid decrease in platelet count. Patients with warning signs should be monitored closely in a hospital.",
+    "source": "WHO Dengue Clinical Management",
+    "url": "https://www.who.int/docs/default-source/wpro---documents/dps/health-focus-areas/dengue/clinical-management.pdf",
+    "topic": "dengue, warning signs, hospital"
+  },
+  {
+    "id": "chunk_paracetamol_children",
+    "text": "Paracetamol is the recommended antipyretic for children. Standard dose: 10-15 mg per kg of body weight every 4-6 hours, maximum 4 doses in 24 hours. Do not exceed 60 mg per kg per day. Avoid in children with liver disease. Do not use aspirin or ibuprofen in dengue — NSAIDs increase bleeding risk.",
+    "source": "WHO Essential Medicines for Children",
+    "url": "https://www.who.int/medicines/publications/essentialmedicines/en/",
+    "topic": "paracetamol, children, fever, dengue"
+  },
+  {
+    "id": "chunk_diabetes_management",
+    "text": "Type 2 diabetes management includes blood glucose monitoring, diet modification with low glycaemic index foods, regular exercise, and medication. Metformin is the first-line oral medication. Target fasting blood glucose: 4-7 mmol/L. HbA1c target: below 7%. Monitor for hypoglycaemia symptoms: sweating, shaking, confusion, rapid heartbeat.",
+    "source": "WHO Diabetes Fact Sheet",
+    "url": "https://www.who.int/news-room/fact-sheets/detail/diabetes",
+    "topic": "diabetes, metformin, blood glucose, management"
+  },
+  {
+    "id": "chunk_metformin_safety",
+    "text": "Metformin is generally safe for type 2 diabetes. Common side effects include nausea and diarrhoea, usually transient. Serious risk: lactic acidosis (rare) — risk increases with kidney impairment, liver disease, heart failure, or before iodinated contrast procedures. Hold metformin 48 hours before contrast imaging and resume after confirming normal renal function.",
+    "source": "WHO Model Formulary",
+    "url": "https://www.who.int/publications/i/item/9789240012837",
+    "topic": "metformin, lactic acidosis, kidney, contrast"
+  },
+  {
+    "id": "chunk_hypertension_management",
+    "text": "Hypertension is defined as systolic pressure at or above 140 mmHg or diastolic at or above 90 mmHg on repeated measurement. Lifestyle changes include reducing salt intake to below 5g per day, regular aerobic exercise, maintaining healthy weight, and limiting alcohol. First-line medications include ACE inhibitors, calcium channel blockers such as amlodipine, and thiazide diuretics.",
+    "source": "WHO Hypertension Fact Sheet",
+    "url": "https://www.who.int/news-room/fact-sheets/detail/hypertension",
+    "topic": "hypertension, blood pressure, amlodipine, lifestyle"
+  },
+  {
+    "id": "chunk_warfarin_monitoring",
+    "text": "Warfarin requires regular INR monitoring — target INR 2.0-3.0 for most indications including atrial fibrillation. Interactions: greatly increased bleeding risk with NSAIDs (ibuprofen, aspirin, naproxen), some antibiotics such as metronidazole, and sudden changes in vitamin K intake. Signs of overdose include unusual bruising, prolonged bleeding, and blood in urine or stool.",
+    "source": "WHO Model Formulary 2023",
+    "url": "https://www.who.int/publications/i/item/9789240012837",
+    "topic": "warfarin, INR, monitoring, bleeding, interaction"
+  },
+  {
+    "id": "chunk_nsaid_kidney_risk",
+    "text": "NSAIDs including ibuprofen, naproxen, and diclofenac should be avoided in patients with chronic kidney disease. They reduce renal prostaglandin synthesis causing decreased glomerular filtration rate. Even short-term use can precipitate acute kidney injury in susceptible patients. Paracetamol is the preferred analgesic for patients with kidney impairment.",
+    "source": "WHO Kidney Disease Guidelines",
+    "url": "https://www.who.int/news-room/fact-sheets/detail/chronic-kidney-disease",
+    "topic": "NSAIDs, kidney disease, ibuprofen, paracetamol"
+  },
+  {
+    "id": "chunk_penicillin_allergy_detail",
+    "text": "Penicillin allergy affects approximately 10 percent of the population. Symptoms range from mild rash to life-threatening anaphylaxis. Cross-reactivity with cephalosporins occurs in 1-2 percent of penicillin-allergic patients. For documented penicillin allergy, use alternative antibiotics such as azithromycin, clindamycin, or vancomycin depending on the indication.",
+    "source": "WHO Essential Medicines Guide",
+    "url": "https://www.who.int/medicines/publications/essentialmedicines/en/",
+    "topic": "penicillin allergy, anaphylaxis, alternative antibiotics"
+  },
+  {
+    "id": "chunk_fever_adults",
+    "text": "Fever in adults above 38 degrees Celsius or 100.4 degrees Fahrenheit: rest and maintain fluid intake. Use paracetamol 500-1000 mg every 4-6 hours (maximum 4g per day) for discomfort. Avoid aspirin in suspected dengue. Seek medical attention if fever exceeds 39.4 degrees Celsius (103 degrees Fahrenheit), persists beyond 3 days, or is accompanied by stiff neck, severe headache, rash, or confusion.",
+    "source": "WHO Clinical Practice Guidelines",
+    "url": "https://www.who.int/publications/i/item/9789240012837",
+    "topic": "fever, adults, paracetamol, when to seek care"
+  },
+  {
+    "id": "chunk_ors_dehydration",
+    "text": "Oral Rehydration Solution (ORS) is the first-line treatment for mild to moderate dehydration from diarrhoea or vomiting. WHO ORS formula: 1 litre clean water, 6 teaspoons sugar, half teaspoon salt. Give small sips frequently. Seek medical care for severe dehydration, bloody stool, or inability to keep fluids down.",
+    "source": "WHO Diarrhoea Treatment Guidelines",
+    "url": "https://www.who.int/publications/i/item/9789241598415",
+    "topic": "ORS, dehydration, diarrhoea, rehydration"
+  },
+  {
+    "id": "chunk_amlodipine_safety",
+    "text": "Amlodipine is a calcium channel blocker used for hypertension and angina. Common side effects include ankle swelling (peripheral oedema), flushing, headache, and dizziness. Generally well-tolerated in older adults. Does not significantly interact with warfarin. Take daily at the same time and do not stop abruptly without medical advice as it can cause rebound hypertension.",
+    "source": "WHO Model Formulary 2023",
+    "url": "https://www.who.int/publications/i/item/9789240012837",
+    "topic": "amlodipine, hypertension, side effects, warfarin"
+  },
+  {
+    "id": "chunk_atrial_fibrillation",
+    "text": "Atrial fibrillation (AF) is an irregular rapid heart rhythm causing poor blood flow. Symptoms include palpitations, weakness, reduced exercise tolerance, chest pain, and shortness of breath. Major risk is stroke due to blood clots. Management includes rate control, rhythm control, and anticoagulation with warfarin or DOACs to prevent stroke. Regular INR monitoring is essential with warfarin.",
+    "source": "WHO Cardiovascular Disease Guidelines",
+    "url": "https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)",
+    "topic": "atrial fibrillation, warfarin, stroke, anticoagulation"
+  },
+  {
+    "id": "chunk_warfarin_diet",
+    "text": "Patients on warfarin should maintain consistent intake of vitamin K-rich foods rather than eliminating them. High vitamin K foods include leafy greens such as spinach, kale, and broccoli. Sudden large changes in vitamin K intake destabilise INR. Alcohol can increase warfarin effect and bleeding risk — limit to 1-2 units per day. Regular INR checks allow dose adjustments.",
+    "source": "WHO Model Formulary",
+    "url": "https://www.who.int/publications/i/item/9789240012837",
+    "topic": "warfarin, vitamin K, diet, INR, alcohol"
+  },
+  {
+    "id": "chunk_child_fever_danger",
+    "text": "Danger signs in children with fever requiring immediate hospital care: inability to drink or breastfeed, vomiting everything, convulsions, lethargy or unconsciousness, and stridor. In children under 5, fever with stiff neck or bulging fontanelle may indicate meningitis and requires immediate attention. Never give aspirin to children under 16 due to Reye syndrome risk.",
+    "source": "WHO IMCI Guidelines",
+    "url": "https://www.who.int/publications/i/item/9789241597272",
+    "topic": "children, fever, danger signs, meningitis, aspirin"
   }
 ]

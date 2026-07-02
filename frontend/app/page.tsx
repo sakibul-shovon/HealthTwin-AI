@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { getHousehold, post, postVoiceConfirm, postCareNotify } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
 import { ResponseEnvelope } from "@/lib/types";
@@ -11,8 +11,6 @@ import VoiceOrb from "@/components/VoiceOrb";
 import VerdictCard from "@/components/VerdictCard";
 import VoicePanel from "@/components/VoicePanel";
 import ChatPanel from "@/components/ChatPanel";
-
-type ViewMode = "chat" | "visual";
 
 export default function Home() {
   const {
@@ -34,7 +32,7 @@ export default function Home() {
     clearMessages,
   } = useTwinStore();
 
-  const [viewMode, setViewMode] = useState<ViewMode>("chat");
+  // D2: permanent 3-column layout — no view toggle needed
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isProcessing = orbState === "thinking" || orbState === "speaking";
 
@@ -210,57 +208,33 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Center: View toggle */}
-        <div
-          className="flex items-center rounded-xl p-0.5 gap-0.5"
-          style={{ backgroundColor: "var(--primary-deep)" }}
-        >
-          {(["chat", "visual"] as ViewMode[]).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className="text-xs font-semibold px-4 py-1.5 rounded-lg transition-all capitalize"
-              style={{
-                backgroundColor: viewMode === mode ? "var(--accent)" : "transparent",
-                color: viewMode === mode ? "white" : "var(--primary-tint)",
-              }}
-            >
-              {mode === "chat" ? "💬 Chat" : "🌐 Visual"}
-            </button>
-          ))}
-        </div>
-
-        {/* Right: status */}
+        {/* Center: status chips */}
         <div className="flex items-center gap-2">
           {isSTTSupported ? (
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "var(--well-bg)", color: "var(--well)" }}
-            >
+            <span className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "var(--well-bg)", color: "var(--well)" }}>
               Voice ready
             </span>
           ) : (
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "var(--watch-bg)", color: "var(--watch)" }}
-            >
+            <span className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "var(--watch-bg)", color: "var(--watch)" }}>
               Text-only
             </span>
           )}
           {household && (
-            <span
-              className="text-[10px] px-2.5 py-1 rounded-full hidden sm:block"
-              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}
-            >
+            <span className="text-[10px] px-2.5 py-1 rounded-full hidden sm:block"
+              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}>
               {household.name}
             </span>
           )}
+        </div>
+
+        {/* Right: clear */}
+        <div className="flex items-center gap-2">
           {messages.length > 0 && (
-            <button
-              onClick={clearMessages}
+            <button onClick={clearMessages}
               className="text-[10px] px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
-              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}
-            >
+              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}>
               Clear
             </button>
           )}
@@ -271,35 +245,26 @@ export default function Home() {
       {notifications.length > 0 && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-xs">
           {notifications.map((n) => (
-            <div
-              key={n.id}
-              className="flex items-start gap-2 rounded-xl px-4 py-3 shadow-xl"
-              style={{ backgroundColor: "var(--primary)", color: "white" }}
-            >
+            <div key={n.id} className="flex items-start gap-2 rounded-xl px-4 py-3 shadow-xl"
+              style={{ backgroundColor: "var(--primary)", color: "white" }}>
               <span className="text-xs mt-0.5">🔔</span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold">→ {n.target}</p>
                 <p className="text-[11px] opacity-80 truncate">{n.message}</p>
               </div>
-              <button
-                onClick={() => dismissNotification(n.id)}
-                className="text-[11px] opacity-60 hover:opacity-100 shrink-0"
-              >
-                ✕
-              </button>
+              <button onClick={() => dismissNotification(n.id)}
+                className="text-[11px] opacity-60 hover:opacity-100 shrink-0">✕</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Body ────────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+      {/* ── Body: permanent 3-column layout (D2) ────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
 
         {/* Left: Member Rail */}
-        <div
-          className="hidden md:flex md:flex-col w-56 shrink-0 overflow-y-auto"
-          style={{ borderRight: "1px solid var(--surface-sunk)" }}
-        >
+        <div className="hidden md:flex md:flex-col w-56 shrink-0 overflow-y-auto"
+          style={{ borderRight: "1px solid var(--surface-sunk)" }}>
           {members.length > 0 ? (
             <MemberRail members={members} activeMember={activeMember} onSelect={setActiveMember} />
           ) : (
@@ -309,149 +274,94 @@ export default function Home() {
           )}
         </div>
 
-        {/* ── CHAT MODE ───────────────────────────────────────────────────── */}
-        {viewMode === "chat" && (
-          <>
-            {/* Center: Orb + Chat History */}
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+        {/* Center: Orb bar + Chat + Voice input */}
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
-              {/* Compact Orb bar */}
-              <div
-                className="flex items-center justify-between px-5 py-2 shrink-0"
-                style={{ borderBottom: "1px solid var(--surface-sunk)" }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="scale-[0.55] origin-left">
-                    <VoiceOrb onClick={handleOrbClick} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold" style={{ color: "var(--ink)" }}>
-                      {orbState === "listening" && "Listening…"}
-                      {orbState === "thinking" && "Processing…"}
-                      {orbState === "speaking" && "Speaking…"}
-                      {orbState === "error" && "Error — try again"}
-                      {orbState === "idle" && (isListening ? "Listening…" : "Ready")}
-                    </p>
-                    {transcript && (
-                      <p className="text-[10px] italic truncate max-w-[200px]"
-                        style={{ color: "var(--ink-faint)" }}>
-                        &ldquo;{transcript}&rdquo;
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {focusedMember && (
-                  <span
-                    className="text-[10px] px-2.5 py-1 rounded-full font-medium"
-                    style={{ backgroundColor: "var(--accent-glow)", color: "var(--accent-deep)" }}
-                  >
-                    Focus: {focusedMember}
-                  </span>
+          {/* Compact orb status bar */}
+          <div className="flex items-center justify-between px-5 py-2 shrink-0"
+            style={{ borderBottom: "1px solid var(--surface-sunk)" }}>
+            <div className="flex items-center gap-3">
+              <div className="scale-[0.55] origin-left">
+                <VoiceOrb onClick={handleOrbClick} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold" style={{ color: "var(--ink)" }}>
+                  {orbState === "listening" && "Listening…"}
+                  {orbState === "thinking" && "Processing…"}
+                  {orbState === "speaking" && "Speaking…"}
+                  {orbState === "error" && "Error — try again"}
+                  {orbState === "idle" && (isListening ? "Listening…" : "Ready")}
+                </p>
+                {transcript && (
+                  <p className="text-[10px] italic truncate max-w-[200px]"
+                    style={{ color: "var(--ink-faint)" }}>
+                    &ldquo;{transcript}&rdquo;
+                  </p>
                 )}
               </div>
-
-              {/* Chat history */}
-              <div className="flex-1 overflow-hidden">
-                <ChatPanel
-                  messages={messages}
-                  isThinking={orbState === "thinking"}
-                  onExampleClick={(t) => handleCommand(t, "en")}
-                />
-              </div>
-
-              {/* Voice Panel */}
-              <div
-                className="shrink-0 px-4 pb-4 pt-3"
-                style={{ borderTop: "1px solid var(--surface-sunk)" }}
-              >
-                <VoicePanel
-                  onSubmit={handleCommand}
-                  isListening={isListening}
-                  isSTTSupported={isSTTSupported}
-                  onMicClick={handleMicClick}
-                  disabled={isProcessing}
-                />
-              </div>
             </div>
+            {focusedMember && (
+              <span className="text-[10px] px-2.5 py-1 rounded-full font-medium"
+                style={{ backgroundColor: "var(--accent-glow)", color: "var(--accent-deep)" }}>
+                Focus: {focusedMember}
+              </span>
+            )}
+          </div>
 
-            {/* Right: Verdict Card */}
-            <div
-              className="hidden lg:flex flex-col w-80 shrink-0 overflow-y-auto p-4 gap-3"
-              style={{ borderLeft: "1px solid var(--surface-sunk)" }}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-widest"
-                style={{ color: "var(--ink-faint)" }}>
-                Latest Verdict
-              </p>
-              <VerdictCard
-                response={lastResponse as ResponseEnvelope | null}
-                onAction={handleAction}
+          {/* Chat history */}
+          <div className="flex-1 overflow-hidden">
+            <ChatPanel
+              messages={messages}
+              isThinking={orbState === "thinking"}
+              onExampleClick={(t) => handleCommand(t, "en")}
+            />
+          </div>
+
+          {/* Voice input */}
+          <div className="shrink-0 px-4 pb-4 pt-3"
+            style={{ borderTop: "1px solid var(--surface-sunk)" }}>
+            <VoicePanel
+              onSubmit={handleCommand}
+              isListening={isListening}
+              isSTTSupported={isSTTSupported}
+              onMicClick={handleMicClick}
+              disabled={isProcessing}
+            />
+          </div>
+        </div>
+
+        {/* Right: Twin panel — Constellation + Verdict (always visible) */}
+        <div className="hidden lg:flex flex-col w-80 shrink-0 overflow-y-auto"
+          style={{ borderLeft: "1px solid var(--surface-sunk)" }}>
+
+          {/* Constellation */}
+          <div className="flex items-center justify-center p-4 shrink-0">
+            {members.length > 0 && (
+              <Constellation
+                members={members}
+                focusedMember={focusedMember}
+                activeMember={activeMember}
+                alertMembers={alertMembers}
+                verdict={lastResponse?.verdict ?? null}
+                onSelect={setActiveMember}
               />
-            </div>
-          </>
-        )}
+            )}
+          </div>
 
-        {/* ── VISUAL MODE ─────────────────────────────────────────────────── */}
-        {viewMode === "visual" && (
-          <>
-            {/* Center: Living Twin */}
-            <div className="flex-1 flex flex-col items-center justify-between py-4 md:py-6 px-4 overflow-hidden min-h-0">
-              <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-                <div className="relative">
-                  {members.length > 0 && (
-                    <Constellation
-                      members={members}
-                      focusedMember={focusedMember}
-                      activeMember={activeMember}
-                      alertMembers={alertMembers}
-                      onSelect={setActiveMember}
-                    />
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <VoiceOrb onClick={handleOrbClick} />
-                  </div>
-                </div>
-              </div>
+          <div style={{ borderTop: "1px solid var(--surface-sunk)" }} />
 
-              {transcript && (
-                <p className="text-xs text-center px-4 mb-2 italic max-w-xs truncate"
-                  style={{ color: "var(--ink-faint)" }}>
-                  &ldquo;{transcript}&rdquo;
-                </p>
-              )}
-
-              <div
-                className="w-full max-w-lg rounded-2xl p-4"
-                style={{ backgroundColor: "var(--surface)", border: "1px solid var(--surface-sunk)" }}
-              >
-                <VoicePanel
-                  onSubmit={handleCommand}
-                  isListening={isListening}
-                  isSTTSupported={isSTTSupported}
-                  onMicClick={handleMicClick}
-                  disabled={isProcessing}
-                />
-              </div>
-            </div>
-
-            {/* Right: Verdict Panel */}
-            <div
-              className="verdict-panel-mobile md:w-80 md:shrink-0 md:overflow-y-auto p-4"
-              style={{ borderTop: "1px solid var(--surface-sunk)" }}
-            >
-              <h2
-                className="text-[10px] font-semibold uppercase tracking-widest mb-3 md:block hidden"
-                style={{ color: "var(--ink-faint)" }}
-              >
-                Verdict
-              </h2>
-              <VerdictCard
-                response={lastResponse as ResponseEnvelope | null}
-                onAction={handleAction}
-              />
-            </div>
-          </>
-        )}
+          {/* Verdict card */}
+          <div className="p-4 flex flex-col gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest"
+              style={{ color: "var(--ink-faint)" }}>
+              Latest Verdict
+            </p>
+            <VerdictCard
+              response={lastResponse as ResponseEnvelope | null}
+              onAction={handleAction}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

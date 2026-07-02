@@ -107,6 +107,38 @@ def _stub(title: str, spoken: str, detail: str, language: str, nlu: NluResult, a
     }
 
 
+_TRIAGE_SECONDARY_KEYWORDS = {
+    "fever", "pain", "breath", "chest", "dizzy", "nausea", "vomiting",
+    "headache", "rash", "swelling", "জ্বর", "ব্যথা", "শ্বাস",
+}
+_DRUG_SECONDARY_KEYWORDS = {
+    "ibuprofen", "aspirin", "paracetamol", "warfarin", "metformin",
+    "amlodipine", "medicine", "medication", "drug", "tablet", "ওষুধ",
+}
+
+
+def _secondary_intent(transcript: str, primary: str) -> str | None:
+    lower = transcript.lower()
+    if primary == "DRUG_SAFETY_CHECK" and any(k in lower for k in _TRIAGE_SECONDARY_KEYWORDS):
+        return "TRIAGE_CHECK"
+    if primary == "TRIAGE_CHECK" and any(k in lower for k in _DRUG_SECONDARY_KEYWORDS):
+        return "DRUG_SAFETY_CHECK"
+    return None
+
+
+def _merge_responses(primary: dict, secondary: dict, language: str) -> dict:
+    _SEVERITY = {"EMERGENCY": 5, "UNSAFE": 4, "CAUTION": 3, "REFUSE": 2, "SAFE": 1, "INFO": 0}
+    p = _SEVERITY.get(primary.get("verdict", "INFO"), 0)
+    s = _SEVERITY.get(secondary.get("verdict", "INFO"), 0)
+    dominant, sub = (secondary, primary) if s > p else (primary, secondary)
+    sub_spoken = sub.get("spoken", "")
+    combined = dominant.get("spoken", "")
+    if sub_spoken and sub_spoken not in combined:
+        sep = " — আরও: " if language == "bn" else " — Also: "
+        combined = combined + sep + sub_spoken
+    return {**dominant, "spoken": combined}
+
+
 def _refuse(spoken: str, language: str, nlu: NluResult) -> dict:
     return {
         "verdict": "REFUSE",
@@ -136,6 +168,8 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
     if red_flag:
         return build_emergency_envelope(red_flag, nlu.member, language)
 
+    secondary = _secondary_intent(nlu.raw_transcript or "", intent)
+
     # ── LIVE: Drug safety check ──────────────────────────────────────────────
     if intent == "DRUG_SAFETY_CHECK":
         drug = entity.name if entity else None
@@ -152,6 +186,10 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
         envelope = run_safety_check(db, household_id, nlu.member, drug, dose=dose, language=language)
         if isinstance(envelope, dict):
             envelope.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+        if secondary == "TRIAGE_CHECK":
+            symptom_text = nlu.raw_transcript or ""
+            triage_result = run_triage(db, household_id, nlu.member or "", symptom_text, language=language)
+            envelope = _merge_responses(envelope, triage_result, language)
         return envelope
 
     # ── LIVE: Profile writes with confirm-before-commit ──────────────────────
@@ -177,6 +215,9 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
         ])).strip()
         result = run_triage(db, household_id, nlu.member or "", symptom_text, language=language)
         result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+        if secondary == "DRUG_SAFETY_CHECK" and entity and entity.name and nlu.member:
+            safety_result = run_safety_check(db, household_id, nlu.member, entity.name, language=language)
+            result = _merge_responses(result, safety_result, language)
         return result
 
     # ── LIVE: Pattern Agent ──────────────────────────────────────────────────

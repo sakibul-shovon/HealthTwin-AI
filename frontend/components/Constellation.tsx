@@ -8,6 +8,7 @@ interface Props {
   focusedMember: string | null;
   activeMember: string | null;
   alertMembers?: string[];  // multi-node pattern alert (amber edge glow)
+  verdict?: string | null;  // last response verdict — drives emergency red + dimming
   onSelect: (label: string) => void;
 }
 
@@ -26,9 +27,14 @@ const INITIALS: Record<string, string> = {
   Child: "C",
 };
 
-export default function Constellation({ members, focusedMember, activeMember, alertMembers = [], onSelect }: Props) {
+export default function Constellation({ members, focusedMember, activeMember, alertMembers = [], verdict, onSelect }: Props) {
   const RADIUS = 140;
   const SIZE = RADIUS * 2 + 80;
+  const isEmergency = verdict === "EMERGENCY";
+  const isDimming = (verdict === "UNSAFE" || verdict === "CAUTION" || verdict === "EMERGENCY") && focusedMember !== null;
+  const focusColor = isEmergency ? "var(--urgent)" : "var(--accent)";
+  const focusDeep = isEmergency ? "var(--urgent)" : "var(--accent-deep)";
+  const focusGlow = isEmergency ? "rgba(239,68,68,0.25)" : "var(--accent-glow)";
 
   // Track changes to focusedMember to trigger a burst ripple
   const [burstKey, setBurstKey] = useState(0);
@@ -80,6 +86,7 @@ export default function Constellation({ members, focusedMember, activeMember, al
         const focused = m.role_label === focusedMember;
         const active = m.role_label === activeMember;
         const alerted = alertMembers.includes(m.role_label);
+        const dimmed = isDimming && !focused && !alerted;
 
         return (
           <motion.div
@@ -89,6 +96,8 @@ export default function Constellation({ members, focusedMember, activeMember, al
               left: SIZE / 2 + pos.x - 30,
               top: SIZE / 2 + pos.y - 30,
             }}
+            animate={{ opacity: dimmed ? 0.3 : 1 }}
+            transition={{ duration: 0.4 }}
             onClick={() => onSelect(m.role_label)}
           >
             {/* One-shot burst ripple when this node becomes focused */}
@@ -102,7 +111,7 @@ export default function Constellation({ members, focusedMember, activeMember, al
                       style={{
                         width: 56,
                         height: 56,
-                        border: "2px solid var(--accent)",
+                        border: `2px solid ${focusColor}`,
                         left: 0,
                         top: 0,
                       }}
@@ -127,7 +136,7 @@ export default function Constellation({ members, focusedMember, activeMember, al
                 style={{
                   width: 60,
                   height: 60,
-                  background: alerted && !focused ? "var(--watch-bg)" : "var(--accent-glow)",
+                  background: alerted && !focused ? "var(--watch-bg)" : focusGlow,
                   filter: "blur(12px)",
                 }}
                 animate={{ opacity: alerted ? [0.5, 1.0, 0.5] : [0.4, 0.8, 0.4] }}
@@ -156,7 +165,7 @@ export default function Constellation({ members, focusedMember, activeMember, al
               className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold shadow-md relative z-10"
               style={{
                 backgroundColor: focused
-                  ? "var(--accent)"
+                  ? focusColor
                   : alerted
                   ? "var(--watch-bg)"
                   : active
@@ -165,7 +174,7 @@ export default function Constellation({ members, focusedMember, activeMember, al
                 color: focused ? "white" : alerted ? "var(--watch)" : "var(--primary)",
                 border: `2px solid ${
                   focused
-                    ? "var(--accent-deep)"
+                    ? focusDeep
                     : alerted
                     ? "var(--watch)"
                     : active
@@ -173,7 +182,11 @@ export default function Constellation({ members, focusedMember, activeMember, al
                     : "var(--ink-faint)"
                 }`,
               }}
-              animate={focused ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+              animate={focused
+                ? isEmergency
+                  ? { scale: [1, 1.12, 1], boxShadow: ["0 0 0px #ef4444", "0 0 20px #ef4444", "0 0 0px #ef4444"] }
+                  : { scale: [1, 1.08, 1] }
+                : { scale: 1 }}
               transition={focused ? { duration: 1.2, repeat: Infinity } : {}}
               whileHover={{ scale: 1.1 }}
             >

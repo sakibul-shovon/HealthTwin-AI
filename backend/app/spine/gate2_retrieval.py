@@ -88,11 +88,17 @@ def retrieve(query: str, k: int = 6) -> RetrievalResult:
         # Try full pipeline (dense + sparse + rerank).
         # Falls back to BM25-only if PyTorch can't load (paging file / OOM).
         try:
+            import numpy as np
             embedder = get_embedding_model()
-            query_embedding = embedder.encode(query, normalize_embeddings=True).tolist()
-            dense_results = db.query(KBChunk).order_by(
-                KBChunk.embedding.cosine_distance(query_embedding)
-            ).limit(k * 2).all()
+            query_embedding = embedder.encode(query, normalize_embeddings=True)
+            all_chunks = db.query(KBChunk).filter(KBChunk.embedding.isnot(None)).all()
+            if not all_chunks:
+                return _bm25_only_retrieve(query, k, db)
+            chunk_embeddings = np.array([c.embedding for c in all_chunks], dtype=np.float32)
+            cos_sims = chunk_embeddings @ query_embedding.astype(np.float32)
+            top_idx = cos_sims.argsort()[-(k * 2):][::-1]
+            dense_results = [all_chunks[i] for i in top_idx]
+            query_embedding = query_embedding.tolist()
         except Exception:
             # PyTorch / OpenBLAS OOM — fall back to BM25 only
             return _bm25_only_retrieve(query, k, db)

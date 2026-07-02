@@ -31,6 +31,20 @@ _REFUSE_BN = (
 )
 
 
+_CLINICAL_KEYWORDS = {
+    "safe", "unsafe", "dose", "dosage", "drug", "medicine", "medication",
+    "interaction", "side effect", "overdose", "contraindication", "prescription",
+    "mg", "mcg", "ml", "warfarin", "ibuprofen", "aspirin", "metformin",
+    "paracetamol", "amlodipine", "penicillin", "antibiotic", "tablet",
+}
+
+
+def _is_clinical(question: str) -> bool:
+    """Returns True if the question involves drug/dose/safety — requires grounded evidence."""
+    lower = question.lower()
+    return any(kw in lower for kw in _CLINICAL_KEYWORDS)
+
+
 def _llm_answer(question: str, language: str, member_context: str = "") -> str | None:
     """Ask Llama directly. member_context injects household profile data when available."""
     if not settings.GROQ_API_KEY:
@@ -72,88 +86,56 @@ def _llm_answer(question: str, language: str, member_context: str = "") -> str |
 def run_companion(db: Session, household_id: int, question: str, language: str, member_context: str = "") -> dict:
     lang = language
 
-    # When we have real member data, go straight to personalized LLM — skip corpus search
+    # Path A: member context provided
     if member_context:
-        llm_text = _llm_answer(question, lang, member_context)
-        if llm_text:
-            _write_trace(db, passed=True)
-            return {
-                "verdict": "INFO",
-                "spoken": llm_text,
-                "display": {
-                    "title": "Health Information",
-                    "conflict": None,
-                    "alternative": None,
-                    "detail": llm_text,
-                    "member": None,
-                    "interpreted": f"answer: {question[:80]}",
-                    "urgency": None,
-                    "members": [],
-                },
-                "evidence": {"source": "Household profile", "confidence": "HIGH", "grounding_score": None},
-                "actions": [],
-                "member_focus": None,
-                "language": lang,
-            }
+        if _is_clinical(question):
+            # Clinical + member context: Gate 2 first; refuse if insufficient
+            answer = grounded_explain(question)
+            if answer.band != "LOW" and answer.evidence is not None:
+                _write_trace(db, passed=True, source=answer.evidence.source, score=answer.evidence.grounding_score)
+                return _build_grounded_response(answer, question, lang)
+            spoken = _REFUSE_BN if lang == "bn" else _REFUSE_EN
+            _write_trace(db, passed=False)
+            return _build_refuse(spoken, question, lang)
+        else:
+            # Non-clinical + member context: LLM allowed, marked unverified
+            llm_text = _llm_answer(question, lang, member_context)
+            if llm_text:
+                _write_trace(db, passed=True)
+                return _build_unverified_info(llm_text, question, lang)
 
+    # Path B: no member context — Gate 2 first
     answer = grounded_explain(question)
 
-    # KB grounding failed — try LLM general knowledge before refusing
-    if answer.band == "LOW" or answer.evidence is None:
-        llm_text = _llm_answer(question, lang, member_context)
-        if llm_text:
-            _write_trace(db, passed=True)
-            return {
-                "verdict": "INFO",
-                "spoken": llm_text,
-                "display": {
-                    "title": "Health Information",
-                    "conflict": None,
-                    "alternative": None,
-                    "detail": llm_text,
-                    "member": None,
-                    "interpreted": f"answer: {question[:80]}",
-                    "urgency": None,
-                    "members": [],
-                },
-                "evidence": {"source": "General knowledge (unverified)", "confidence": "LOW", "grounding_score": None},
-                "actions": [],
-                "member_focus": None,
-                "language": lang,
-            }
+    if answer.band != "LOW" and answer.evidence is not None:
+        _write_trace(db, passed=True, source=answer.evidence.source, score=answer.evidence.grounding_score)
+        return _build_grounded_response(answer, question, lang)
+
+    # Gate 2 insufficient
+    if _is_clinical(question):
+        # Clinical + no grounding → REFUSE
         spoken = _REFUSE_BN if lang == "bn" else _REFUSE_EN
         _write_trace(db, passed=False)
-        return {
-            "verdict": "REFUSE",
-            "spoken": spoken,
-            "display": {
-                "title": "Cannot Verify",
-                "conflict": None,
-                "alternative": "Please consult a doctor or pharmacist.",
-                "detail": spoken,
-                "member": None,
-                "interpreted": f"answer: {question[:80]}",
-                "urgency": None,
-                "members": [],
-            },
-            "evidence": {"source": None, "confidence": None, "grounding_score": None},
-            "actions": [],
-            "member_focus": None,
-            "language": lang,
-        }
+        return _build_refuse(spoken, question, lang)
 
+    # Non-clinical + no grounding → LLM fallback with disclaimer
+    llm_text = _llm_answer(question, lang)
+    if llm_text:
+        _write_trace(db, passed=True)
+        return _build_unverified_info(llm_text, question, lang)
+
+    spoken = _REFUSE_BN if lang == "bn" else _REFUSE_EN
+    _write_trace(db, passed=False)
+    return _build_refuse(spoken, question, lang)
+
+
+def _build_grounded_response(answer, question: str, lang: str) -> dict:
     ev = answer.evidence
     disclaimer = _DISCLAIMER_BN if lang == "bn" else _DISCLAIMER_EN
-    detail = f"{answer.text}\n\n{disclaimer}"
     spoken = answer.text
-
-    # Keep spoken under ~40 words for TTS comfort
     words = spoken.split()
     if len(words) > 40:
         spoken = " ".join(words[:40]) + "…"
-
-    _write_trace(db, passed=True, source=ev.source, score=ev.grounding_score)
-
     return {
         "verdict": "INFO",
         "spoken": spoken,
@@ -161,7 +143,7 @@ def run_companion(db: Session, household_id: int, question: str, language: str, 
             "title": "Health Information",
             "conflict": None,
             "alternative": None,
-            "detail": detail,
+            "detail": f"{answer.text}\n\n{disclaimer}",
             "member": None,
             "interpreted": f"answer: {question[:80]}",
             "urgency": None,
@@ -171,6 +153,53 @@ def run_companion(db: Session, household_id: int, question: str, language: str, 
             "source": ev.source,
             "confidence": ev.confidence,
             "grounding_score": ev.grounding_score,
+        },
+        "actions": [],
+        "member_focus": None,
+        "language": lang,
+    }
+
+
+def _build_refuse(spoken: str, question: str, lang: str) -> dict:
+    return {
+        "verdict": "REFUSE",
+        "spoken": spoken,
+        "display": {
+            "title": "Cannot Verify",
+            "conflict": None,
+            "alternative": "Please consult a doctor or pharmacist.",
+            "detail": spoken,
+            "member": None,
+            "interpreted": f"answer: {question[:80]}",
+            "urgency": None,
+            "members": [],
+        },
+        "evidence": {"source": None, "confidence": None, "grounding_score": None},
+        "actions": [],
+        "member_focus": None,
+        "language": lang,
+    }
+
+
+def _build_unverified_info(llm_text: str, question: str, lang: str) -> dict:
+    disclaimer = _DISCLAIMER_BN if lang == "bn" else _DISCLAIMER_EN
+    return {
+        "verdict": "INFO",
+        "spoken": llm_text,
+        "display": {
+            "title": "Health Information",
+            "conflict": None,
+            "alternative": None,
+            "detail": f"{llm_text}\n\n{disclaimer}",
+            "member": None,
+            "interpreted": f"answer: {question[:80]}",
+            "urgency": None,
+            "members": [],
+        },
+        "evidence": {
+            "source": "General knowledge (unverified)",
+            "confidence": "LOW",
+            "grounding_score": None,
         },
         "actions": [],
         "member_focus": None,

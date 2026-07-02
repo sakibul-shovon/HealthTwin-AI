@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import datetime, timedelta
 
 # Add the root directory to sys.path so we can run this directly if needed
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -7,13 +8,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from sqlalchemy.orm import Session
 from app.graph.database import SessionLocal, engine, Base
 from app.graph.models import (
-    Household, Member, Condition, Medication, Allergy, Relationship, RelationshipType
+    Household, Member, Condition, Medication, Allergy, Relationship, RelationshipType,
+    SymptomLog, AgentTrace,
 )
 
 def seed_rahman_family(db: Session):
-    # Idempotent: Wipe previous Rahman household if it exists (assuming household 1 is Rahman for now)
+    # Idempotent: Wipe previous Rahman household — clear FK-dependent tables first
     existing = db.query(Household).filter(Household.name == "Rahman Family").first()
     if existing:
+        member_ids = [m.id for m in existing.members]
+        if member_ids:
+            db.query(AgentTrace).filter(AgentTrace.member_id.in_(member_ids)).delete(synchronize_session=False)
+            db.commit()
         db.delete(existing)
         db.commit()
     
@@ -74,6 +80,15 @@ def seed_rahman_family(db: Session):
     ])
     
     db.commit()
+
+    # 7. Add recent fever SymptomLog for Ma and Child — triggers dengue cluster demo
+    now = datetime.utcnow()
+    db.add_all([
+        SymptomLog(member_id=ma.id, symptom="fever", severity=7, logged_at=now - timedelta(hours=1)),
+        SymptomLog(member_id=child.id, symptom="fever", severity=6, logged_at=now - timedelta(hours=2)),
+    ])
+    db.commit()
+
     print(f"Successfully seeded the Rahman family into household {household.id}")
     return household.id
 
