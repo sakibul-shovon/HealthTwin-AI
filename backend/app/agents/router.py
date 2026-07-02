@@ -4,6 +4,7 @@ from app.agents.safety import run_safety_check
 from app.agents.pattern import run_pattern_check
 from app.agents.triage import run_triage
 from app.agents.care import query_caregiver
+from app.agents.companion import run_companion
 from app.graph.crud import get_household
 
 WRITE_INTENTS = {"ADD_MEMBER", "UPDATE_MEMBER", "UPDATE_MEDICATION", "LOG_SYMPTOM", "SET_REMINDER", "ASSIGN_CAREGIVER"}
@@ -135,10 +136,14 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
         return _stub("Confirm Reminder", spoken, detail, language, nlu,
                      actions=[{"type": "confirm_write", "label": "Set Reminder", "target": nlu.member}])
 
-    # ── STUB: Companion — Step 13 ───────────────────────────────────────────
+    # ── LIVE: Companion Agent ────────────────────────────────────────────────
     if intent == "GENERAL_HEALTH_Q":
-        spoken = "সাধারণ প্রশ্নের উত্তর শীঘ্রই আসছে।" if language == "bn" else "General health Q&A is coming soon."
-        return _stub("Health Question", spoken, "(Companion Agent — Step 13)", language, nlu)
+        question = nlu.raw_transcript or (
+            ((entity.name or "") + " " + (entity.value or "")).strip() if entity else ""
+        ) or "health question"
+        result = run_companion(db, household_id, question, language)
+        result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+        return result
 
     # ── HOUSEHOLD_STATUS: simple summary ────────────────────────────────────
     if intent == "HOUSEHOLD_STATUS":

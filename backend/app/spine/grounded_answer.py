@@ -37,7 +37,13 @@ def _score_to_band(score: float) -> str:
 
 def grounded_explain(question: str, forced_facts: Optional[List[str]] = None) -> GroundedAnswer:
     # 1. Retrieve supporting evidence
-    retrieval_res = retrieve(question, k=3)
+    try:
+        retrieval_res = retrieve(question, k=3)
+    except Exception:
+        return GroundedAnswer(
+            text="I can't verify this safely based on my trusted medical sources. Please consult a doctor or pharmacist.",
+            band="LOW",
+        )
 
     if not retrieval_res.sufficient or not retrieval_res.chunks:
         return GroundedAnswer(

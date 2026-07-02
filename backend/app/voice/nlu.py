@@ -24,6 +24,7 @@ class NluResult(BaseModel):
     language: str
     confidence: float
     needs_confirmation: bool = False
+    raw_transcript: Optional[str] = None
 
 def detect_bengali(text: str) -> bool:
     # Bengali unicode block: U+0980 - U+09FF
@@ -73,13 +74,13 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
                 language=detected_lang,
                 confidence=0.9,
                 entity=EntityInfo(type="medication", name="ibuprofen"),
+                raw_transcript=transcript,
             )
         # Generic medication-write pattern: "add X to/for Y" or drug name in known list
         _MOCK_DRUGS = {
             "losartan": ("Ma", "losartan", "50mg"),
             "metformin": ("Ma", "metformin", "500mg"),
             "aspirin": ("Baba", "aspirin", "100mg"),
-            "paracetamol": ("Baba", "paracetamol", "500mg"),
         }
         for drug, (default_member, drug_name, default_dose) in _MOCK_DRUGS.items():
             if drug in tl:
@@ -97,8 +98,22 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
                     needs_confirmation=True,
                     action="add",
                     entity=EntityInfo(type="medication", name=drug_name, dose=default_dose),
+                    raw_transcript=transcript,
                 )
-        return NluResult(intent="UNKNOWN", language=detected_lang, confidence=0.0)
+        # General health questions — recognise key corpus topics
+        _HEALTH_Q_KEYWORDS = [
+            "empty stomach", "paracetamol safe", "dengue", "dengue fever",
+            "penicillin", "allergy", "warfarin", "blood thinner",
+            "what is", "how to", "is it safe", "can i", "should i",
+        ]
+        if any(kw in tl for kw in _HEALTH_Q_KEYWORDS) and "add" not in tl and "remind" not in tl:
+            return NluResult(
+                intent="GENERAL_HEALTH_Q",
+                language=detected_lang,
+                confidence=0.8,
+                raw_transcript=transcript,
+            )
+        return NluResult(intent="UNKNOWN", language=detected_lang, confidence=0.0, raw_transcript=transcript)
 
     # Real LLM call
     client = Groq(api_key=api_key)
@@ -166,7 +181,8 @@ Ensure valid JSON output ONLY.
             ),
             language=detected_lang,
             confidence=float(parsed.get("confidence", 0.9)),
-            needs_confirmation=needs_conf
+            needs_confirmation=needs_conf,
+            raw_transcript=transcript,
         )
     except Exception as e:
-        return NluResult(intent="UNKNOWN", language=detected_lang, confidence=0.0)
+        return NluResult(intent="UNKNOWN", language=detected_lang, confidence=0.0, raw_transcript=transcript)
