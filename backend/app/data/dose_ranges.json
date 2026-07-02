@@ -1,17 +1,20 @@
 {
   "paracetamol": {
+    "adult_max_single_mg": 1000,
     "adult_max_daily_mg": 4000,
     "peds_mg_per_kg_per_dose": 15,
     "peds_max_mg_per_kg_per_day": 60,
     "source": "WHO EML"
   },
   "ibuprofen": {
+    "adult_max_single_mg": 800,
     "adult_max_daily_mg": 3200,
     "peds_mg_per_kg_per_dose": 10,
     "peds_max_mg_per_kg_per_day": 40,
     "source": "WHO EML"
   },
   "amoxicillin": {
+    "adult_max_single_mg": 1000,
     "adult_max_daily_mg": 3000,
     "peds_mg_per_kg_per_dose": 30,
     "peds_max_mg_per_kg_per_day": 90,

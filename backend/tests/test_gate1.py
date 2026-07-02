@@ -88,6 +88,12 @@ def test_self_paracetamol_safe(self_profile):
     assert result.verdict == "SAFE"
     assert len(result.conflicts) == 0
 
+def test_adult_dose_rule_fix(self_profile):
+    # Single dose of 2000mg Paracetamol should fail (max single is 1000mg)
+    result = check_drug_safety(self_profile, "paracetamol", dose="2000mg")
+    assert result.verdict == "UNSAFE"
+    assert any(c.type == "dose" for c in result.conflicts)
+
 def test_child_paracetamol_overdose(child_profile):
     # max dose should be 25 * 15 = 375mg, providing 500mg should trigger warning
     result = check_drug_safety(child_profile, "paracetamol", dose="500mg")

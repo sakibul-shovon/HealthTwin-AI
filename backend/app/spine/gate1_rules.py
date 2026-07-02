@@ -123,12 +123,12 @@ def check_drug_safety(profile: MemberProfileSchema, drug: str, dose: Optional[st
                         ))
                 # Without weight, we cannot safely calculate pediatric dose here.
             else:
-                # Naive adult check (assumes dose_str is a single dose, limits is daily max - simplifies for demo)
-                # A more robust engine would differentiate per-dose vs daily max based on frequency.
-                if parsed_mg > limits.get("adult_max_daily_mg", float('inf')):
+                # Naive adult check
+                max_single = limits.get("adult_max_single_mg", limits.get("adult_max_daily_mg", float('inf')))
+                if parsed_mg > max_single:
                     conflicts.append(ConflictDetail(
                         type="dose",
-                        detail=f"Dose {parsed_mg}mg exceeds adult max daily limit ({limits.get('adult_max_daily_mg')}mg)",
+                        detail=f"Single dose {parsed_mg}mg exceeds adult max recommended single dose ({max_single}mg)",
                         severity="high",
                         source=limits.get("source", "WHO EML")
                     ))

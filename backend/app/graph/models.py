@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, JSON, DateTime, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, JSON, DateTime, Text, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -30,6 +30,9 @@ class Member(Base):
     kidney_impaired = Column(Boolean, default=False)
     liver_impaired = Column(Boolean, default=False)
     pregnant = Column(Boolean, default=False)
+    risk_score = Column(Float, default=0.0)
+    risk_factors = Column(JSON, nullable=True)
+    blood_group = Column(String(5), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     household = relationship("Household", back_populates="members")
@@ -134,3 +137,55 @@ class KBChunk(Base):
     url = Column(String, nullable=False)
     topic = Column(String, nullable=False)
     embedding = Column(JSON, nullable=True)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    household_id = Column(Integer, ForeignKey("households.id"), nullable=False)
+    role = Column(String, nullable=False)          # "user" | "assistant"
+    text = Column(Text, nullable=False)
+    envelope = Column(JSON, nullable=True)         # full response envelope (assistant turns)
+    intent = Column(String, nullable=True)
+    member_focus = Column(String, nullable=True)
+    language = Column(String, default="en")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    household = relationship("Household")
+
+
+class HealthEvent(Base):
+    __tablename__ = "health_events"
+    id = Column(Integer, primary_key=True, index=True)
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    event_type = Column(String, nullable=False)    # medication_added, symptom_logged, safety_alert, …
+    detail = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    member = relationship("Member")
+
+
+class Document(Base):
+    __tablename__ = "documents"
+    id = Column(Integer, primary_key=True, index=True)
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    household_id = Column(Integer, ForeignKey("households.id"), nullable=False)
+    kind = Column(String, nullable=False)          # prescription | lab_report | discharge | other
+    filename = Column(String, nullable=False)
+    extracted = Column(JSON, nullable=True)        # OCR / extracted entities (pending until confirmed)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    member = relationship("Member")
+    household = relationship("Household")
+    chunks = relationship("DocChunk", back_populates="document", cascade="all, delete-orphan")
+
+
+class DocChunk(Base):
+    __tablename__ = "doc_chunks"
+    id = Column(String, primary_key=True)          # "<document_id>_<chunk_index>"
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    member_id = Column(Integer, nullable=True)
+    text = Column(Text, nullable=False)
+    embedding = Column(JSON, nullable=True)        # JSON for dev; pgvector upgrade in E22
+
+    document = relationship("Document", back_populates="chunks")

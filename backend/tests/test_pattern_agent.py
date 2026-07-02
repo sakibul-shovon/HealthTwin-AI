@@ -22,6 +22,9 @@ def _get_household() -> tuple[int, dict[str, int]]:
         hh = db.query(Household).filter(Household.name == "Rahman Family").first()
         assert hh is not None, "Rahman Family not seeded"
         label_to_id = {m.role_label: m.id for m in hh.members}
+        # Clean up any seeded SymptomLogs so tests start from a clean slate
+        db.query(SymptomLog).filter(SymptomLog.member_id.in_(label_to_id.values())).delete(synchronize_session=False)
+        db.commit()
         return hh.id, label_to_id
     finally:
         db.close()

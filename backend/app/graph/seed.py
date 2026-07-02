@@ -81,16 +81,41 @@ def seed_rahman_family(db: Session):
     
     db.commit()
 
-    # 7. Add recent fever SymptomLog for Ma and Child — triggers dengue cluster demo
+    print(f"Successfully seeded the Rahman family into household {household.id}")
+    
+    seed_demo_fever_cluster(db, household.id)
+    return household.id
+
+def seed_demo_fever_cluster(db: Session, household_id: int):
+    from app.config import settings
+    # Find Ma and Child
+    household = db.query(Household).filter(Household.id == household_id).first()
+    if not household:
+        return
+    ma = next((m for m in household.members if m.role_label == "Ma"), None)
+    child = next((m for m in household.members if m.role_label == "Child"), None)
+    
+    if not ma or not child:
+        return
+        
     now = datetime.utcnow()
+    cutoff = now - timedelta(hours=settings.CLUSTER_WINDOW_HOURS)
+    
+    # Guard against double seeding
+    existing_logs = db.query(SymptomLog).filter(
+        SymptomLog.member_id.in_([ma.id, child.id]),
+        SymptomLog.symptom == "fever",
+        SymptomLog.logged_at >= cutoff
+    ).count()
+    
+    if existing_logs >= 2:
+        return
+        
     db.add_all([
         SymptomLog(member_id=ma.id, symptom="fever", severity=7, logged_at=now - timedelta(hours=1)),
         SymptomLog(member_id=child.id, symptom="fever", severity=6, logged_at=now - timedelta(hours=2)),
     ])
     db.commit()
-
-    print(f"Successfully seeded the Rahman family into household {household.id}")
-    return household.id
 
 if __name__ == "__main__":
     db = SessionLocal()
