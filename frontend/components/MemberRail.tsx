@@ -99,6 +99,20 @@ export default function MemberRail({ members, activeMember, onSelect }: Props) {
                 ))}
               </div>
             )}
+
+            {m.reminders && m.reminders.filter(r => r.active).length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {m.reminders.filter(r => r.active).map((r) => (
+                  <span
+                    key={r.id}
+                    className="text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: "var(--info-bg, #e8f4fd)", color: "var(--info, #1a6fa8)" }}
+                  >
+                    ⏰ {r.time}
+                  </span>
+                ))}
+              </div>
+            )}
           </motion.button>
         );
       })}

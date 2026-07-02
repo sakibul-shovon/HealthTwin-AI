@@ -3,6 +3,7 @@ from app.voice.nlu import NluResult
 from app.agents.safety import run_safety_check
 from app.agents.pattern import run_pattern_check
 from app.agents.triage import run_triage
+from app.agents.care import query_caregiver
 from app.graph.crud import get_household
 
 WRITE_INTENTS = {"ADD_MEMBER", "UPDATE_MEMBER", "UPDATE_MEDICATION", "LOG_SYMPTOM", "SET_REMINDER", "ASSIGN_CAREGIVER"}
@@ -115,10 +116,24 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
         result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
         return result
 
-    # ── STUB: Care — Step 12 ────────────────────────────────────────────────
-    if intent in ("SET_REMINDER", "ASSIGN_CAREGIVER"):
-        spoken = "রিমাইন্ডার শীঘ্রই আসছে।" if language == "bn" else "Reminders and caregiver features are coming soon."
-        return _stub("Care", spoken, "(Care Agent — Step 12)", language, nlu)
+    # ── LIVE: Care Agent ─────────────────────────────────────────────────────
+    if intent == "ASSIGN_CAREGIVER":
+        # Query-only path (no entity name = asking who cares for member)
+        result = query_caregiver(db, household_id, nlu.member or "", language)
+        result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+        return result
+
+    if intent == "SET_REMINDER":
+        entity_name = entity.name if entity else "medication"
+        time_hint = entity.value if entity else ""
+        m = nlu.member or "the member"
+        if language == "bn":
+            spoken = f"{m} এর {entity_name} এর জন্য {time_hint} রিমাইন্ডার সেট করবো — নিশ্চিত করুন?"
+        else:
+            spoken = f"I'll set a reminder for {m} to take {entity_name}" + (f" at {time_hint}" if time_hint else "") + " — confirm?"
+        detail = f"This will create a daily reminder for {m}: {entity_name}" + (f" at {time_hint}." if time_hint else ".")
+        return _stub("Confirm Reminder", spoken, detail, language, nlu,
+                     actions=[{"type": "confirm_write", "label": "Set Reminder", "target": nlu.member}])
 
     # ── STUB: Companion — Step 13 ───────────────────────────────────────────
     if intent == "GENERAL_HEALTH_Q":

@@ -10,6 +10,9 @@ from app.voice.pending import store_pending, retrieve_pending, clear_pending
 from app.agents.router import route
 from app.agents.composer import compose
 from app.agents.profile import run_profile_write
+from app.agents.care import set_reminder_from_nlu
+
+_CARE_WRITE_INTENTS = {"SET_REMINDER"}
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -81,4 +84,6 @@ def voice_confirm(req: ConfirmRequest, db: Session = Depends(get_db)):
         }
 
     household_id = _get_household_id(db)
+    if nlu.intent in _CARE_WRITE_INTENTS:
+        return set_reminder_from_nlu(db, household_id, nlu)
     return run_profile_write(db, household_id, nlu)

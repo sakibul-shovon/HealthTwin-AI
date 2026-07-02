@@ -30,6 +30,15 @@ export async function postVoiceConfirm(pending_id: string, confirmed: boolean) {
   return post("/api/voice/confirm", { pending_id, confirmed });
 }
 
+export async function postCareNotify(
+  target: string,
+  message: string,
+  from_member = "HealthTwin",
+  language = "en",
+) {
+  return post("/api/care/notify", { target, message, from_member, language });
+}
+
 export async function post(path: string, body: Record<string, unknown>) {
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {

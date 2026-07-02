@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import { getHousehold, post, postVoiceConfirm } from "@/lib/api";
+import { getHousehold, post, postVoiceConfirm, postCareNotify } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
 import { ResponseEnvelope } from "@/lib/types";
 import { useVoice } from "@/hooks/useVoice";
@@ -18,11 +18,14 @@ export default function Home() {
     orbState,
     lastResponse,
     transcript,
+    notifications,
     setHousehold,
     setActiveMember,
     setOrbState,
     setLastResponse,
     setTranscript,
+    addNotification,
+    dismissNotification,
   } = useTwinStore();
 
   const isProcessing = orbState === "thinking" || orbState === "speaking";
@@ -117,6 +120,8 @@ export default function Home() {
     pending_id?: string;
   }) {
     if (action.type === "notify_caregiver" && action.target) {
+      const result = await postCareNotify(action.target, "Safety alert from HealthTwin");
+      if (result?.notification) addNotification(result.notification);
       const msg = `Notifying ${action.target}.`;
       setOrbState("speaking");
       speak(msg, "en");
@@ -205,6 +210,31 @@ export default function Home() {
           )}
         </div>
       </header>
+
+      {/* ── Notification toasts ─────────────────────────────────── */}
+      {notifications.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-xs">
+          {notifications.map((n) => (
+            <div
+              key={n.id}
+              className="flex items-start gap-2 rounded-xl px-4 py-3 shadow-lg"
+              style={{ backgroundColor: "var(--primary)", color: "white" }}
+            >
+              <span className="text-xs mt-0.5">🔔</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold">Notification → {n.target}</p>
+                <p className="text-[11px] opacity-80 truncate">{n.message}</p>
+              </div>
+              <button
+                onClick={() => dismissNotification(n.id)}
+                className="text-[11px] opacity-60 hover:opacity-100 shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Body ────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">

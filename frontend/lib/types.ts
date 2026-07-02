@@ -43,6 +43,14 @@ export interface MedicationInfo {
   dose: string
 }
 
+export interface ReminderInfo {
+  id: number
+  medication_id: number | null
+  time: string
+  repeat_rule: string
+  active: boolean
+}
+
 export interface AllergyInfo {
   substance: string
   reaction: string | null
@@ -64,6 +72,7 @@ export interface HouseholdMember {
   medications: MedicationInfo[]
   allergies: AllergyInfo[]
   flags: MemberFlags
+  reminders: ReminderInfo[]
 }
 
 export interface Household {
