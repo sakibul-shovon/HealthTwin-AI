@@ -31,9 +31,11 @@ def scan_red_flags(text: str) -> Optional[str]:
     return None
 
 
-def build_emergency_envelope(red_flag: str, member_ref: Optional[str], language: str) -> dict:
+def build_emergency_envelope(db: "Session", household_id: int, red_flag: str, member_ref: Optional[str], language: str) -> dict:
     """Build a full ResponseEnvelope for an emergency intercept."""
     num = settings.EMERGENCY_NUMBER
+    map_url = getattr(settings, "NEAREST_HOSPITAL", "https://maps.google.com/?q=hospital")
+    
     if language == "bn":
         spoken = (
             f"এটি জরুরি অবস্থা হতে পারে — এখনই {num} এ ফোন করুন "
@@ -50,25 +52,68 @@ def build_emergency_envelope(red_flag: str, member_ref: Optional[str], language:
             "This could be a life-threatening situation. "
             f"Call {num} immediately — do NOT try to manage this at home."
         )
+
+    critical = None
+    cg_target = "Family"
+    
+    if member_ref:
+        from app.graph.crud import resolve_member
+        from app.graph.models import Relationship, Member
+        m = resolve_member(db, household_id, member_ref)
+        if m:
+            meds = [f"{med.name} {med.dose}" for med in m.medications]
+            allergies = [a.substance for a in m.allergies]
+            conditions = [c.name for c in m.conditions]
+            flags = []
+            if m.kidney_impaired: flags.append("kidney impaired")
+            if m.liver_impaired: flags.append("liver impaired")
+            if m.pregnant: flags.append("pregnant")
+            
+            # Find caregiver
+            rel = db.query(Relationship).filter(Relationship.from_member_id == m.id, Relationship.caregiver == True).first()
+            cg = db.query(Member).filter(Member.id == rel.to_member_id).first() if rel else None
+            cg_name = cg.role_label if cg else "Family"
+            cg_target = cg_name
+            
+            critical = {
+                "medications": meds,
+                "allergies": allergies,
+                "conditions": conditions,
+                "flags": flags,
+                "blood_group": getattr(m, 'blood_group', None),
+                "age": m.age,
+                "caregiver": cg_name
+            }
+
+    actions = [
+        {"type": "call_emergency", "label": f"Call {num}", "target": num},
+        {"type": "notify_caregiver", "label": f"Notify {cg_target}", "target": cg_target},
+        {"type": "nearest_hospital", "label": "Nearest Hospital", "target": map_url},
+    ]
+
+    display = {
+        "title": "Emergency — Act Now",
+        "conflict": red_flag,
+        "alternative": None,
+        "detail": detail,
+        "member": member_ref or None,
+        "interpreted": "emergency detected",
+        "urgency": "Emergency",
+        "members": [member_ref] if member_ref else [],
+    }
+    if critical:
+        display["critical"] = critical
+
     return {
         "verdict": "EMERGENCY",
         "spoken": spoken,
-        "display": {
-            "title": "Emergency — Act Now",
-            "conflict": red_flag,
-            "alternative": None,
-            "detail": detail,
-            "member": member_ref or None,
-            "interpreted": "emergency detected",
-            "urgency": "Emergency",
-            "members": [member_ref] if member_ref else [],
-        },
+        "display": display,
         "evidence": {
             "source": "Deterministic red-flag rule",
             "confidence": "HIGH",
             "grounding_score": 1.0,
         },
-        "actions": [{"type": "call_emergency", "label": f"Call {num}", "target": num}],
+        "actions": actions,
         "member_focus": member_ref or None,
         "language": language,
     }

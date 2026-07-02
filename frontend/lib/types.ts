@@ -4,6 +4,16 @@ export interface EvidenceMeta {
   grounding_score: number | null
 }
 
+export interface CriticalInfo {
+  medications: string[];
+  allergies: string[];
+  conditions: string[];
+  flags: string[];
+  blood_group: string | null;
+  age: number;
+  caregiver: string;
+}
+
 export interface ResponseAction {
   type: string
   label: string
@@ -27,6 +37,7 @@ export interface ResponseEnvelope {
     interpreted: string | null
     members?: string[]  // multi-node pattern alerts
     urgency?: 'Emergency' | 'Urgent' | 'Moderate' | 'Low' | null
+    critical?: CriticalInfo
   }
   evidence: EvidenceMeta
   actions: ResponseAction[]

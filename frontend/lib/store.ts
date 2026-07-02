@@ -17,6 +17,8 @@ interface TwinState {
   transcript: string;
   notifications: AppNotification[];
   messages: ChatMessage[];
+  emergencyActive: boolean;
+  emergencyData: ResponseEnvelope | null;
   setHousehold: (household: Household) => void;
   setActiveMember: (member: string | null) => void;
   setOrbState: (state: TwinState["orbState"]) => void;
@@ -25,7 +27,9 @@ interface TwinState {
   addNotification: (n: AppNotification) => void;
   dismissNotification: (id: string) => void;
   addMessage: (msg: ChatMessage) => void;
+  setMessages: (messages: ChatMessage[]) => void;
   clearMessages: () => void;
+  setEmergency: (active: boolean, data?: ResponseEnvelope | null) => void;
 }
 
 export const useTwinStore = create<TwinState>((set) => ({
@@ -36,6 +40,8 @@ export const useTwinStore = create<TwinState>((set) => ({
   transcript: "",
   notifications: [],
   messages: [],
+  emergencyActive: false,
+  emergencyData: null,
   setHousehold: (household) => set({ household }),
   setActiveMember: (activeMember) => set({ activeMember }),
   setOrbState: (orbState) => set({ orbState }),
@@ -45,5 +51,7 @@ export const useTwinStore = create<TwinState>((set) => ({
   dismissNotification: (id) =>
     set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
+  setMessages: (messages) => set({ messages }),
   clearMessages: () => set({ messages: [] }),
+  setEmergency: (active, data = null) => set({ emergencyActive: active, emergencyData: data }),
 }));

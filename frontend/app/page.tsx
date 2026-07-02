@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useCallback, useRef } from "react";
-import { getHousehold, post, postVoiceConfirm, postCareNotify } from "@/lib/api";
+import { getHousehold, post, postVoiceConfirm, postCareNotify, getChatHistory, clearChatHistory } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
 import { ResponseEnvelope } from "@/lib/types";
 import { useVoice } from "@/hooks/useVoice";
 import MemberRail from "@/components/MemberRail";
 import Constellation from "@/components/Constellation";
 import VoiceOrb from "@/components/VoiceOrb";
+import EmergencyMode from "@/components/EmergencyMode";
 import VerdictCard from "@/components/VerdictCard";
 import VoicePanel from "@/components/VoicePanel";
 import ChatPanel from "@/components/ChatPanel";
@@ -29,19 +30,34 @@ export default function Home() {
     addNotification,
     dismissNotification,
     addMessage,
+    setMessages,
     clearMessages,
+    emergencyActive,
+    setEmergency,
   } = useTwinStore();
 
   // D2: permanent 3-column layout — no view toggle needed
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isProcessing = orbState === "thinking" || orbState === "speaking";
 
-  // ── Load household on mount ────────────────────────────────────────────────
+  // ── Load household & chat history on mount ────────────────────────────────
   useEffect(() => {
     getHousehold().then((data) => {
       if (data) setHousehold(data);
     });
-  }, [setHousehold]);
+    getChatHistory().then((history: any[]) => {
+      if (history && history.length > 0) {
+        const clientMessages = history.map(msg => ({
+          id: `db-${msg.id}`,
+          role: msg.role as "user" | "assistant",
+          text: msg.text,
+          envelope: msg.envelope,
+          timestamp: new Date(msg.created_at).getTime(),
+        }));
+        setMessages(clientMessages);
+      }
+    });
+  }, [setHousehold, setMessages]);
 
   // ── Core command handler ───────────────────────────────────────────────────
   const handleCommand = useCallback(
@@ -65,6 +81,9 @@ export default function Home() {
 
       if (data) {
         const envelope = data as ResponseEnvelope;
+        if (envelope.verdict === "EMERGENCY") {
+          setEmergency(true, envelope);
+        }
         setLastResponse(envelope);
         setOrbState("speaking");
 
@@ -182,6 +201,8 @@ export default function Home() {
       className="flex flex-col h-screen overflow-hidden"
       style={{ backgroundColor: "var(--canvas)" }}
     >
+      {/* Emergency Mode Overlay */}
+      <EmergencyMode onAction={handleAction} />
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header
         className="flex items-center justify-between px-5 py-3 shrink-0 z-20"
@@ -232,7 +253,7 @@ export default function Home() {
         {/* Right: clear */}
         <div className="flex items-center gap-2">
           {messages.length > 0 && (
-            <button onClick={clearMessages}
+            <button onClick={() => { clearChatHistory(); clearMessages(); }}
               className="text-[10px] px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
               style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}>
               Clear

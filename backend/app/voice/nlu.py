@@ -44,7 +44,12 @@ def resolve_drug_name(drug: str, synonyms: dict) -> str:
     d = drug.lower().strip()
     return synonyms.get(d, d)
 
-def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluResult:
+def parse_command(
+    transcript: str, 
+    language_hint: Optional[str] = None,
+    context: str = "",
+    last_member_focus: Optional[str] = None
+) -> NluResult:
     is_bn = detect_bengali(transcript)
     detected_lang = "bn" if is_bn or language_hint == "bn" else "en"
     
@@ -79,14 +84,25 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
         if any(kw in tl for kw in _HELP_KW):
             return NluResult(intent="HELP", language=detected_lang, confidence=1.0, raw_transcript=transcript)
 
+        def _resolve_member(default: str, text: str, raw_text: str) -> str:
+            tl = text.lower()
+            for alias, label in [("baba", "Baba"), ("ma", "Ma"), ("self", "Self"), ("child", "Child"), ("বাবা", "Baba"), ("মা", "Ma"), ("আমি", "Self"), ("বাচ্চা", "Child")]:
+                if alias in tl:
+                    return label
+            has_pronoun = any(p in tl.split() for p in ["him", "her", "he", "she", "his", "it", "them", "their"]) or any(p in raw_text for p in ["তাকে", "তার"])
+            if has_pronoun and last_member_focus:
+                return last_member_focus
+            return default
+
         # ── Drug safety check ─────────────────────────────────────────────────
-        if "ibuprofen" in tl or "ওষুধ" in transcript:
+        if "ibuprofen" in tl or "paracetamol" in tl or "ওষুধ" in transcript:
+            drug = "ibuprofen" if "ibuprofen" in tl else "paracetamol" if "paracetamol" in tl else "medication"
             return NluResult(
                 intent="DRUG_SAFETY_CHECK",
-                member="Baba" if ("baba" in tl or "বাবা" in transcript) else "Self",
+                member=_resolve_member("Self", tl, transcript),
                 language=detected_lang,
                 confidence=0.9,
-                entity=EntityInfo(type="medication", name="ibuprofen"),
+                entity=EntityInfo(type="medication", name=drug),
                 raw_transcript=transcript,
             )
 
@@ -98,14 +114,9 @@ def parse_command(transcript: str, language_hint: Optional[str] = None) -> NluRe
         }
         for drug, (default_member, drug_name, default_dose) in _MOCK_DRUGS.items():
             if drug in tl:
-                member_label = default_member
-                for alias, label in [("baba", "Baba"), ("ma", "Ma"), ("self", "Self"), ("child", "Child")]:
-                    if alias in tl:
-                        member_label = label
-                        break
                 return NluResult(
                     intent="UPDATE_MEDICATION",
-                    member=member_label,
+                    member=_resolve_member(default_member, tl, transcript),
                     language=detected_lang,
                     confidence=0.9,
                     needs_confirmation=True,
@@ -155,6 +166,12 @@ Output ONLY valid JSON matching this schema exactly:
 CLOSED INTENT SET: ADD_MEMBER, UPDATE_MEMBER, UPDATE_MEDICATION, LOG_SYMPTOM, DRUG_SAFETY_CHECK, TRIAGE_CHECK, HOUSEHOLD_STATUS, PATTERN_CHECK, SET_REMINDER, ASSIGN_CAREGIVER, GENERAL_HEALTH_Q, UNKNOWN.
 Write intents (ADD_MEMBER, UPDATE_MEMBER, UPDATE_MEDICATION, LOG_SYMPTOM, SET_REMINDER, ASSIGN_CAREGIVER) MUST have needs_confirmation: true.
 Valid members in this household: {members_str}. Resolve 'my', 'I' to 'Self'. Resolve names to the valid members.
+If the user uses a pronoun (him, her, তাকে, etc.) and no explicit member is named this turn, resolve the member to the most recent member focus from history.
+
+Recent conversation context:
+{context if context else "No recent context."}
+Most recent member focus: {last_member_focus if last_member_focus else "None"}
+
 Ensure valid JSON output ONLY.
 """
     try:

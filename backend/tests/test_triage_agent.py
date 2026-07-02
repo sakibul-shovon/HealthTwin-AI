@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.graph.database import SessionLocal
 from app.graph.models import Household
-from app.agents.triage import run_triage, _scan_red_flags, _extract_temp_fahrenheit
+from app.agents.triage import run_triage, _extract_temp_fahrenheit
+from app.spine.emergency import scan_red_flags
 
 
 def _get_household_id() -> int:
@@ -30,22 +31,22 @@ def _triage(symptom: str, member: str = "Baba", language: str = "en") -> dict:
 # ── Red-flag detection unit tests ─────────────────────────────────────────────
 
 def test_chest_pain_red_flag():
-    assert _scan_red_flags("Baba has chest pain and can't breathe") is not None
+    assert scan_red_flags("Baba has chest pain and can't breathe") is not None
 
 def test_stroke_red_flag():
-    assert _scan_red_flags("Ma's face is drooping and her speech is slurred") is not None
+    assert scan_red_flags("Ma's face is drooping and her speech is slurred") is not None
 
 def test_seizure_red_flag():
-    assert _scan_red_flags("the child is having a seizure") is not None
+    assert scan_red_flags("the child is having a seizure") is not None
 
 def test_unconscious_red_flag():
-    assert _scan_red_flags("he is unconscious and not waking up") is not None
+    assert scan_red_flags("he is unconscious and not waking up") is not None
 
 def test_no_red_flag_for_mild_symptom():
-    assert _scan_red_flags("mild headache since morning") is None
+    assert scan_red_flags("mild headache since morning") is None
 
 def test_no_red_flag_for_fever_alone():
-    assert _scan_red_flags("fever 102") is None
+    assert scan_red_flags("fever 102") is None
 
 
 # ── Temperature extraction unit tests ────────────────────────────────────────

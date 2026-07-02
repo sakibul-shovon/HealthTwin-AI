@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     CLUSTER_WINDOW_HOURS: int = 48
     # Triage Agent: local emergency number (Bangladesh national emergency = 999)
     EMERGENCY_NUMBER: str = "999"
+    NEAREST_HOSPITAL: str = "https://maps.google.com/?q=hospital"
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

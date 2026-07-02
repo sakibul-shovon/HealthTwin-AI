@@ -166,7 +166,7 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
     # Runs before any intent dispatch — catches red flags regardless of intent.
     red_flag = scan_red_flags(nlu.raw_transcript or "")
     if red_flag:
-        return build_emergency_envelope(red_flag, nlu.member, language)
+        return build_emergency_envelope(db, household_id, red_flag, nlu.member, language)
 
     secondary = _secondary_intent(nlu.raw_transcript or "", intent)
 

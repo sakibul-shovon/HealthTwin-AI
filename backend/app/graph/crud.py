@@ -166,6 +166,8 @@ def add_medication(db: Session, member_id: int, name: str, dose: str) -> models.
     db.add(med)
     db.commit()
     db.refresh(med)
+    from .risk import recompute_and_store
+    recompute_and_store(db, member_id)
     return med
 
 def add_condition(db: Session, member_id: int, name: str) -> models.Condition:
@@ -173,6 +175,8 @@ def add_condition(db: Session, member_id: int, name: str) -> models.Condition:
     db.add(cond)
     db.commit()
     db.refresh(cond)
+    from .risk import recompute_and_store
+    recompute_and_store(db, member_id)
     return cond
 
 def add_allergy(db: Session, member_id: int, substance: str, reaction: Optional[str] = None) -> models.Allergy:
@@ -198,6 +202,8 @@ def update_member_flags(db: Session, member_id: int, **flags) -> Optional[models
             setattr(member, key, value)
     db.commit()
     db.refresh(member)
+    from .risk import recompute_and_store
+    recompute_and_store(db, member_id)
     return member
 
 def set_caregiver(

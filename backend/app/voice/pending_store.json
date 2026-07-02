@@ -1,0 +1,1 @@
+{"00eda1f5-853e-45b8-8fec-b920c0a48476": {"nlu": {"intent": "LOG_SYMPTOM", "member": "Baba", "action": "add", "entity": {"type": "symptom", "name": "severe bleeding", "dose": null, "value": null}, "language": "en", "confidence": 0.9, "needs_confirmation": true, "raw_transcript": "Baba has severe bleeding"}, "expiry": 1783022123.6237152}}

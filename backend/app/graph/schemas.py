@@ -132,3 +132,22 @@ class ChatMessageSchema(BaseModel):
     
     class Config:
         from_attributes = True
+
+class MemberTwinSchema(BaseModel):
+    member: str
+    age: int
+    sex: str
+    risk_score: float
+    risk_band: str
+    risk_factors: List[str]
+    ai_summary: str
+    medications: List[str]
+    conditions: List[str]
+    allergies: List[str]
+    flags: List[str]
+    caregiver: Optional[str]
+    reminders: List[Dict]
+    recent_alerts: List[Dict]
+
+    class Config:
+        from_attributes = True

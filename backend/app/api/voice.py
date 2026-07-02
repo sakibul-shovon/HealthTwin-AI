@@ -11,7 +11,7 @@ from app.agents.router import route
 from app.agents.composer import compose
 from app.agents.profile import run_profile_write
 from app.agents.care import set_reminder_from_nlu
-from app.memory.chat_store import save_turn
+from app.memory.chat_store import save_turn, get_recent
 
 _CARE_WRITE_INTENTS = {"SET_REMINDER"}
 
@@ -37,8 +37,24 @@ class ConfirmRequest(BaseModel):
 
 @router.post("/command")
 def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
-    nlu = parse_command(req.transcript, language_hint=req.language)
     household_id = _get_household_id(db)
+    
+    recent_turns = get_recent(db, household_id, limit=6)
+    context_lines = []
+    last_member_focus = None
+    for turn in recent_turns:
+        context_lines.append(f"{turn.role.capitalize()}: {turn.text}")
+        if turn.role == "assistant" and turn.member_focus:
+            last_member_focus = turn.member_focus
+            
+    context_str = "\n".join(context_lines)
+    
+    nlu = parse_command(
+        req.transcript, 
+        language_hint=req.language,
+        context=context_str,
+        last_member_focus=last_member_focus
+    )
 
     try:
         raw = route(db, household_id, nlu, nlu.language)
