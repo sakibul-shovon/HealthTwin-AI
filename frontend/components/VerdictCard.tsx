@@ -59,6 +59,12 @@ const VERDICT_STYLE: Record<
     text: "var(--ink-soft)",
     badge: "Cancelled",
   },
+  CLARIFY: {
+    bg: "var(--info-bg)",
+    border: "var(--info)",
+    text: "var(--info)",
+    badge: "Clarification Needed",
+  },
 };
 
 const DEFAULT_STYLE = {

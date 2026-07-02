@@ -13,6 +13,7 @@ const VERDICT_META: Record<string, { color: string; bg: string; label: string }>
   REFUSE:    { color: "var(--ink-faint)", bg: "var(--surface-sunk)","label": "Cannot Verify" },
   CONFIRMED: { color: "var(--well)",      bg: "var(--well-bg)",     label: "Confirmed"     },
   CANCELLED: { color: "var(--ink-faint)", bg: "var(--surface-sunk)","label": "Cancelled"   },
+  CLARIFY:   { color: "var(--info)",      bg: "var(--info-bg)",     label: "Clarification" },
 };
 
 const EXAMPLE_PROMPTS = [

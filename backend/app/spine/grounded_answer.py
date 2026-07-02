@@ -8,6 +8,8 @@ import math
 from typing import List, Optional
 from pydantic import BaseModel
 from app.spine.gate2_retrieval import retrieve
+from app.spine.doc_retrieval import retrieve_docs
+from app.graph.database import SessionLocal
 from app.config import settings
 from groq import Groq
 
@@ -35,10 +37,23 @@ def _score_to_band(score: float) -> str:
     return "LOW"
 
 
-def grounded_explain(question: str, forced_facts: Optional[List[str]] = None) -> GroundedAnswer:
+def grounded_explain(question: str, forced_facts: Optional[List[str]] = None, member_id: Optional[int] = None) -> GroundedAnswer:
     # 1. Retrieve supporting evidence
     try:
-        retrieval_res = retrieve(question, k=3)
+        retrieval_res = None
+        if member_id is not None:
+            db = SessionLocal()
+            try:
+                retrieval_res = retrieve_docs(question, member_id, db)
+            finally:
+                db.close()
+                
+            if not retrieval_res.sufficient:
+                # Fallback to KB
+                retrieval_res = retrieve(question, k=3)
+        else:
+            retrieval_res = retrieve(question, k=3)
+            
     except Exception:
         return GroundedAnswer(
             text="I can't verify this safely based on my trusted medical sources. Please consult a doctor or pharmacist.",

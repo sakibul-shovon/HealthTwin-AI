@@ -83,14 +83,14 @@ def _llm_answer(question: str, language: str, member_context: str = "") -> str |
         return None
 
 
-def run_companion(db: Session, household_id: int, question: str, language: str, member_context: str = "") -> dict:
+def run_companion(db: Session, household_id: int, question: str, language: str, member_context: str = "", member_id: int = None) -> dict:
     lang = language
 
     # Path A: member context provided
     if member_context:
         if _is_clinical(question):
             # Clinical + member context: Gate 2 first; refuse if insufficient
-            answer = grounded_explain(question)
+            answer = grounded_explain(question, member_id=member_id)
             if answer.band != "LOW" and answer.evidence is not None:
                 _write_trace(db, passed=True, source=answer.evidence.source, score=answer.evidence.grounding_score)
                 return _build_grounded_response(answer, question, lang)
@@ -105,7 +105,7 @@ def run_companion(db: Session, household_id: int, question: str, language: str, 
                 return _build_unverified_info(llm_text, question, lang)
 
     # Path B: no member context — Gate 2 first
-    answer = grounded_explain(question)
+    answer = grounded_explain(question, member_id=member_id)
 
     if answer.band != "LOW" and answer.evidence is not None:
         _write_trace(db, passed=True, source=answer.evidence.source, score=answer.evidence.grounding_score)

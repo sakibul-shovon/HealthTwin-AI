@@ -63,7 +63,17 @@ export default function Home() {
   // ── Core command handler ───────────────────────────────────────────────────
   const handleCommand = useCallback(
     async (inputTranscript: string, lang: "en" | "bn") => {
-      if (!inputTranscript.trim() || isProcessing) return;
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (!inputTranscript.trim()) return;
+      
+      // Clear speak timeout if barging in
+      if (speakTimeoutRef.current) {
+          clearTimeout(speakTimeoutRef.current);
+          speakTimeoutRef.current = null;
+      }
+      
       setTranscript(inputTranscript);
       setOrbState("thinking");
 
@@ -97,19 +107,46 @@ export default function Home() {
           timestamp: Date.now(),
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? lang);
         if (utterance) {
-          speakTimeoutRef.current = setTimeout(() => setOrbState("idle"), 8000);
+          speakTimeoutRef.current = setTimeout(() => {
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
+              setOrbState("listening");
+              // eslint-disable-next-line @typescript-eslint/no-use-before-define
+              startListening(lang);
+            } else {
+              setOrbState("idle");
+            }
+          }, 8000);
+          
           utterance.onend = () => {
             if (speakTimeoutRef.current) {
               clearTimeout(speakTimeoutRef.current);
               speakTimeoutRef.current = null;
             }
-            setOrbState("idle");
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
+              setOrbState("listening");
+              // eslint-disable-next-line @typescript-eslint/no-use-before-define
+              startListening(lang);
+            } else {
+              setOrbState("idle");
+            }
           };
         } else {
           const wordCount = envelope.spoken.split(" ").length;
-          setTimeout(() => setOrbState("idle"), Math.max(2500, wordCount * 350));
+          setTimeout(() => {
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
+            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
+              setOrbState("listening");
+              // eslint-disable-next-line @typescript-eslint/no-use-before-define
+              startListening(lang);
+            } else {
+              setOrbState("idle");
+            }
+          }, Math.max(2500, wordCount * 350));
         }
       } else {
         setOrbState("error");
@@ -117,11 +154,11 @@ export default function Home() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isProcessing, setOrbState, setLastResponse, setTranscript, addMessage]
+    [setOrbState, setLastResponse, setTranscript, addMessage]
   );
 
   // ── Voice hook ─────────────────────────────────────────────────────────────
-  const { isListening, isSTTSupported, startListening, stopListening, speak } =
+  const { isListening, isSTTSupported, startListening, stopListening, speak, cancelSpeech } =
     useVoice({
       onTranscript: handleCommand,
       onError: () => {
@@ -135,7 +172,12 @@ export default function Home() {
 
   // ── Orb click ──────────────────────────────────────────────────────────────
   function handleOrbClick() {
-    if (isProcessing) return;
+    cancelSpeech();
+    if (speakTimeoutRef.current) {
+      clearTimeout(speakTimeoutRef.current);
+      speakTimeoutRef.current = null;
+    }
+    
     if (orbState === "listening") {
       stopListening();
       setOrbState("idle");
@@ -146,7 +188,12 @@ export default function Home() {
   }
 
   function handleMicClick(lang: "en" | "bn") {
-    if (isProcessing) return;
+    cancelSpeech();
+    if (speakTimeoutRef.current) {
+      clearTimeout(speakTimeoutRef.current);
+      speakTimeoutRef.current = null;
+    }
+    
     if (orbState === "listening") {
       stopListening();
       setOrbState("idle");

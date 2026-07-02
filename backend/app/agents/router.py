@@ -201,7 +201,7 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
         # No member specified → general drug question, route to Companion
         if not nlu.member:
             question = nlu.raw_transcript or f"Is {drug} safe?"
-            result = run_companion(db, household_id, question, language)
+            result = run_companion(db, household_id, question, language, member_id=None)
             result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
             return result
         dose = entity.dose if entity else None
@@ -296,8 +296,14 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
         # Inject household member profiles as LLM context when members are mentioned
         candidates = ([nlu.member] if nlu.member else []) or _extract_members_from_text(nlu.raw_transcript or "")
         ctx = _build_member_context(db, household_id, candidates) if candidates else ""
+        
+        target_member_id = None
+        if candidates:
+            target_m = db.query(Member).filter(Member.household_id == household_id, Member.role_label.ilike(candidates[0])).first()
+            if target_m:
+                target_member_id = target_m.id
 
-        result = run_companion(db, household_id, question, language, member_context=ctx)
+        result = run_companion(db, household_id, question, language, member_context=ctx, member_id=target_member_id)
         result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
         if result.get("verdict") == "REFUSE":
             spoken = (
@@ -341,7 +347,14 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
     if question.strip():
         candidates = ([nlu.member] if nlu.member else []) or _extract_members_from_text(question)
         ctx = _build_member_context(db, household_id, candidates) if candidates else ""
-        result = run_companion(db, household_id, question, language, member_context=ctx)
+        
+        target_member_id = None
+        if candidates:
+            target_m = db.query(Member).filter(Member.household_id == household_id, Member.role_label.ilike(candidates[0])).first()
+            if target_m:
+                target_member_id = target_m.id
+                
+        result = run_companion(db, household_id, question, language, member_context=ctx, member_id=target_member_id)
         if result.get("verdict") != "REFUSE":
             result.setdefault("display", {})["interpreted"] = question
             return result
