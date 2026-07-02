@@ -183,6 +183,14 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
     db.add(trace)
     db.commit()
 
+    if gate1_result.verdict in ("UNSAFE", "CAUTION"):
+        from app.memory.events import log_event
+        log_event(db, member.id, "safety_alert", {
+            "drug": drug,
+            "verdict": gate1_result.verdict,
+            "conflict": short_conflict
+        })
+
     # 7. Cache all verdicts as deep copies to avoid caller mutation corrupting cache
     with _CACHE_LOCK:
         _FLAGSHIP_CACHE[cache_key] = copy.deepcopy(envelope)

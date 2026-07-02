@@ -23,7 +23,7 @@ export interface ResponseAction {
 
 export type VerdictType =
   | 'SAFE' | 'CAUTION' | 'UNSAFE' | 'INFO'
-  | 'EMERGENCY' | 'REFUSE' | 'CONFIRMED' | 'CANCELLED' | null
+  | 'EMERGENCY' | 'REFUSE' | 'CONFIRMED' | 'CANCELLED' | 'CLARIFY' | null
 
 export interface ResponseEnvelope {
   verdict: VerdictType
@@ -98,4 +98,29 @@ export interface ChatMessage {
   text: string
   envelope?: ResponseEnvelope
   timestamp: number
+}
+
+export interface HealthEvent {
+  id: number;
+  member_id: number;
+  event_type: string;
+  detail: any;
+  created_at: string;
+}
+
+export interface MemberTwinData {
+  member: string;
+  age: number;
+  sex: string;
+  risk_score: number;
+  risk_band: 'LOW' | 'MED' | 'HIGH';
+  risk_factors: string[];
+  ai_summary: string;
+  medications: string[];
+  conditions: string[];
+  allergies: string[];
+  flags: string[];
+  caregiver: string | null;
+  reminders: any[];
+  recent_alerts: any[];
 }

@@ -166,6 +166,8 @@ def add_medication(db: Session, member_id: int, name: str, dose: str) -> models.
     db.add(med)
     db.commit()
     db.refresh(med)
+    from app.memory.events import log_event
+    log_event(db, member_id, "medication_added", {"name": name, "dose": dose})
     from .risk import recompute_and_store
     recompute_and_store(db, member_id)
     return med
@@ -191,6 +193,8 @@ def log_symptom(db: Session, member_id: int, symptom: str, severity: Optional[st
     db.add(entry)
     db.commit()
     db.refresh(entry)
+    from app.memory.events import log_event
+    log_event(db, member_id, "symptom_logged", {"symptom": symptom, "severity": severity})
     return entry
 
 def update_member_flags(db: Session, member_id: int, **flags) -> Optional[models.Member]:

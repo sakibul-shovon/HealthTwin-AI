@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.graph.database import get_db
 from app.graph.models import Member, Relationship, HealthEvent
-from app.graph.schemas import MemberTwinSchema
+from app.graph.schemas import MemberTwinSchema, HealthEventSchema
 from app.graph.risk import compute_risk
+from app.memory.events import get_timeline
+from typing import List
 
 router = APIRouter(prefix="/member", tags=["member"])
 
@@ -30,7 +32,7 @@ def get_member_twin(member_id: int, db: Session = Depends(get_db)):
     
     reminders = [{"id": r.id, "time": r.time, "medication_id": r.medication_id} for r in m.reminders]
     
-    events = db.query(HealthEvent).filter(HealthEvent.member_id == m.id).order_by(HealthEvent.created_at.desc()).limit(3).all()
+    events = get_timeline(db, m.id, limit=3)
     recent_alerts = [{"type": e.event_type, "detail": e.detail, "date": e.created_at.isoformat()} for e in events]
     
     if band == "HIGH":
@@ -56,3 +58,8 @@ def get_member_twin(member_id: int, db: Session = Depends(get_db)):
         "reminders": reminders,
         "recent_alerts": recent_alerts
     }
+
+@router.get("/{member_id}/timeline", response_model=List[HealthEventSchema])
+def get_member_timeline(member_id: int, db: Session = Depends(get_db)):
+    events = get_timeline(db, member_id)
+    return events

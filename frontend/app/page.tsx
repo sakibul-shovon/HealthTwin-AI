@@ -9,6 +9,7 @@ import MemberRail from "@/components/MemberRail";
 import Constellation from "@/components/Constellation";
 import VoiceOrb from "@/components/VoiceOrb";
 import EmergencyMode from "@/components/EmergencyMode";
+import MemberTwin from "@/components/MemberTwin";
 import VerdictCard from "@/components/VerdictCard";
 import VoicePanel from "@/components/VoicePanel";
 import ChatPanel from "@/components/ChatPanel";
@@ -193,6 +194,7 @@ export default function Home() {
   }
 
   const members = household?.members ?? [];
+  const activeMemberId = members.find(m => m.role_label === activeMember)?.id;
   const focusedMember = lastResponse?.member_focus ?? null;
   const alertMembers = lastResponse?.display.members ?? [];
 
@@ -352,36 +354,54 @@ export default function Home() {
         </div>
 
         {/* Right: Twin panel — Constellation + Verdict (always visible) */}
-        <div className="hidden lg:flex flex-col w-80 shrink-0 overflow-y-auto"
+        <div className="hidden lg:flex flex-col w-80 shrink-0 overflow-hidden bg-white z-10"
           style={{ borderLeft: "1px solid var(--surface-sunk)" }}>
+          
+          {activeMemberId ? (
+            <MemberTwin memberId={activeMemberId} onBack={() => setActiveMember(null)} />
+          ) : (
+            <div className="flex flex-col h-full overflow-y-auto">
+              {/* Constellation */}
+              <div className="flex items-center justify-center p-4 shrink-0">
+                {members.length > 0 && (
+                  <Constellation
+                    members={members}
+                    focusedMember={focusedMember}
+                    activeMember={activeMember}
+                    alertMembers={alertMembers}
+                    verdict={lastResponse?.verdict ?? null}
+                    onSelect={setActiveMember}
+                  />
+                )}
+              </div>
 
-          {/* Constellation */}
-          <div className="flex items-center justify-center p-4 shrink-0">
-            {members.length > 0 && (
-              <Constellation
-                members={members}
-                focusedMember={focusedMember}
-                activeMember={activeMember}
-                alertMembers={alertMembers}
-                verdict={lastResponse?.verdict ?? null}
-                onSelect={setActiveMember}
-              />
-            )}
-          </div>
+              <div style={{ borderTop: "1px solid var(--surface-sunk)" }} />
 
-          <div style={{ borderTop: "1px solid var(--surface-sunk)" }} />
-
-          {/* Verdict card */}
-          <div className="p-4 flex flex-col gap-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest"
-              style={{ color: "var(--ink-faint)" }}>
-              Latest Verdict
-            </p>
-            <VerdictCard
-              response={lastResponse as ResponseEnvelope | null}
-              onAction={handleAction}
-            />
-          </div>
+              {/* Verdict or Overview */}
+              {lastResponse ? (
+                <div className="p-4 flex flex-col gap-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest"
+                    style={{ color: "var(--ink-faint)" }}>
+                    Latest Verdict
+                  </p>
+                  <VerdictCard
+                    response={lastResponse as ResponseEnvelope | null}
+                    onAction={handleAction}
+                  />
+                </div>
+              ) : (
+                <div className="p-6 flex flex-col items-center justify-center text-center gap-2 flex-1 opacity-70">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-inner mb-2"
+                    style={{ backgroundColor: "var(--surface-sunk)", color: "var(--ink-faint)" }}>
+                    🏠
+                  </div>
+                  <h3 className="text-sm font-bold" style={{ color: "var(--ink)" }}>{household?.name || "Family Overview"}</h3>
+                  <p className="text-xs" style={{ color: "var(--ink-faint)" }}>{members.length} members tracked</p>
+                  <p className="text-[10px] mt-4 max-w-[200px]" style={{ color: "var(--ink-faint)" }}>Select a member from the rail or constellation to view their AI digital twin.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

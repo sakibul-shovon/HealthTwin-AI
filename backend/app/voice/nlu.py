@@ -125,6 +125,17 @@ def parse_command(
                     raw_transcript=transcript,
                 )
 
+        # ── Triage Check / Follow-up ───────────────────────────────────────────
+        if "fever" in tl or "102" in tl:
+            return NluResult(
+                intent="TRIAGE_CHECK",
+                member=_resolve_member("Child", tl, transcript) if "child" in tl or "102" in tl else None,
+                language=detected_lang,
+                confidence=0.9,
+                entity=EntityInfo(type="symptom", name="fever", value="102" if "102" in tl else None),
+                raw_transcript=transcript,
+            )
+
         # ── General health questions ──────────────────────────────────────────
         _HEALTH_Q_KEYWORDS = [
             "empty stomach", "paracetamol safe", "dengue", "dengue fever",

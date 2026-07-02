@@ -151,3 +151,13 @@ class MemberTwinSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+class HealthEventSchema(BaseModel):
+    id: int
+    member_id: int
+    event_type: str
+    detail: Optional[Dict] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

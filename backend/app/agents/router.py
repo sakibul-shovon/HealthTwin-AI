@@ -158,7 +158,25 @@ def _refuse(spoken: str, language: str, nlu: NluResult) -> dict:
     }
 
 
-def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict:
+def _clarify(title: str, spoken: str, detail: str, language: str, nlu: NluResult) -> dict:
+    return {
+        "verdict": "CLARIFY",
+        "spoken": spoken,
+        "display": {
+            "title": title,
+            "conflict": None,
+            "alternative": None,
+            "detail": detail,
+            "member": nlu.member,
+            "interpreted": _interpreted_text(nlu),
+        },
+        "evidence": {"source": None, "confidence": None, "grounding_score": None},
+        "actions": [],
+        "member_focus": nlu.member,
+        "language": language,
+    }
+
+def route(db: Session, household_id: int, nlu: NluResult, language: str, is_followup: bool = False) -> dict:
     intent = nlu.intent
     entity = nlu.entity
 
@@ -169,6 +187,10 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
         return build_emergency_envelope(db, household_id, red_flag, nlu.member, language)
 
     secondary = _secondary_intent(nlu.raw_transcript or "", intent)
+
+    if not is_followup and nlu.confidence < 0.6:
+        spoken = "আপনি কী বলেছেন তা আমি ঠিক বুঝতে পারিনি। দয়া করে আবার বলবেন?" if language == "bn" else "I didn't quite catch that. Could you clarify?"
+        return _clarify("Needs Clarification", spoken, "Confidence low. Please rephrase.", language, nlu)
 
     # ── LIVE: Drug safety check ──────────────────────────────────────────────
     if intent == "DRUG_SAFETY_CHECK":
@@ -194,6 +216,10 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
 
     # ── LIVE: Profile writes with confirm-before-commit ──────────────────────
     if intent in ("ADD_MEMBER", "UPDATE_MEMBER", "UPDATE_MEDICATION", "LOG_SYMPTOM"):
+        if intent != "ADD_MEMBER" and not nlu.member and not is_followup:
+            spoken = "এটি কার জন্য?" if language == "bn" else "Who is this for?"
+            return _clarify("Missing Member", spoken, "Please specify who this is for.", language, nlu)
+            
         entity_name = entity.name if entity else "that"
         dose_hint = f" {entity.dose}" if (entity and entity.dose) else ""
         action = nlu.action or "add"
@@ -209,10 +235,22 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
 
     # ── LIVE: Triage Agent ───────────────────────────────────────────────────
     if intent == "TRIAGE_CHECK":
+        if not nlu.member and not is_followup:
+            spoken = "কার জন্য লক্ষণ চেক করতে চান?" if language == "bn" else "Who is experiencing these symptoms?"
+            return _clarify("Missing Member", spoken, "Please specify who this is for.", language, nlu)
+            
         symptom_text = " ".join(filter(None, [
             entity.name if entity else None,
             entity.value if entity else None,
+            nlu.raw_transcript
         ])).strip()
+        
+        if ("fever" in symptom_text.lower() or "জ্বর" in symptom_text) and not is_followup:
+            import re
+            if not re.search(r'\d+', symptom_text):
+                spoken = "জ্বর কত এবং কতক্ষণ ধরে?" if language == "bn" else "How high is the fever, and since when?"
+                return _clarify("Missing Details", spoken, "Please provide temperature and duration.", language, nlu)
+
         result = run_triage(db, household_id, nlu.member or "", symptom_text, language=language)
         result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
         if secondary == "DRUG_SAFETY_CHECK" and entity and entity.name and nlu.member:
@@ -234,6 +272,10 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str) -> dict
         return result
 
     if intent == "SET_REMINDER":
+        if not nlu.member and not is_followup:
+            spoken = "এটি কার জন্য?" if language == "bn" else "Who is this for?"
+            return _clarify("Missing Member", spoken, "Please specify who this is for.", language, nlu)
+            
         entity_name = entity.name if entity else "medication"
         time_hint = entity.value if entity else ""
         m = nlu.member or "the member"

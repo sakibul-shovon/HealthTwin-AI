@@ -44,7 +44,7 @@ def compose(envelope: dict, interpreted: str | None = None) -> dict:
         envelope["evidence"] = ev
 
     # ── Evidence guard for medical verdicts ──────────────────────────────────
-    if verdict in MEDICAL_VERDICTS and verdict != "EMERGENCY":
+    if verdict in MEDICAL_VERDICTS and verdict not in ("EMERGENCY", "CLARIFY"):
         ev = envelope.get("evidence") or {}
         if not ev.get("source") or not ev.get("confidence"):
             envelope.setdefault("display", {})["detail"] = (

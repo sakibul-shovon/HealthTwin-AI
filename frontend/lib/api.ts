@@ -44,6 +44,28 @@ export async function getEmergencyCard(memberId: number) {
   }
 }
 
+export async function getMemberTwin(memberId: number) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/twin`);
+    if (!res.ok) throw new Error('Network response was not ok');
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching member twin:', error);
+    return null;
+  }
+}
+
+export async function getMemberTimeline(memberId: number) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/timeline`);
+    if (!res.ok) throw new Error('Network response was not ok');
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching member timeline:', error);
+    return [];
+  }
+}
+
 export async function getHealth() {
   try {
     const res = await fetch(`${API_BASE_URL}/health`);

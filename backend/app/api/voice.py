@@ -56,8 +56,12 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
         last_member_focus=last_member_focus
     )
 
+    is_followup = False
+    if recent_turns and recent_turns[0].role == "assistant" and recent_turns[0].envelope and recent_turns[0].envelope.get("verdict") == "CLARIFY":
+        is_followup = True
+
     try:
-        raw = route(db, household_id, nlu, nlu.language)
+        raw = route(db, household_id, nlu, nlu.language, is_followup=is_followup)
     except Exception:
         lang = nlu.language
         return {
