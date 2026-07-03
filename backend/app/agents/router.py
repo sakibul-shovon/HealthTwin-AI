@@ -109,6 +109,42 @@ def _stub(title: str, spoken: str, detail: str, language: str, nlu: NluResult, a
     }
 
 
+_FAMILY_WIDE_KEYWORDS = {
+    "family", "all", "everyone", "each", "every", "household", "members",
+    "পরিবার", "সবাই", "সকল", "প্রত্যেক",
+}
+
+
+def _is_family_wide_query(text: str) -> bool:
+    lower = text.lower()
+    return any(kw in lower for kw in _FAMILY_WIDE_KEYWORDS)
+
+
+_GREETING_WORDS = {
+    "hello", "hi", "hey", "howdy", "sup", "yo", "হ্যালো", "হাই",
+    "আসসালামু", "আলাইকুম", "সালাম", "নমস্কার",
+    "good morning", "good afternoon", "good evening", "good night",
+    "শুভ সকাল", "শুভ বিকাল", "শুভ রাত",
+}
+_CHITCHAT_WORDS = {
+    "thanks", "thank you", "ok", "okay", "alright", "bye", "goodbye",
+    "ধন্যবাদ", "ঠিক আছে", "বিদায়",
+}
+
+
+def _is_greeting_or_chitchat(text: str) -> str | None:
+    """Return the category ('greeting' or 'chitchat') if the message is casual, else None."""
+    stripped = text.strip().lower()
+    words = stripped.split()
+    # Only match if message is short and contains a known greeting/chitchat word
+    if len(words) <= 4:
+        if any(stripped == g or stripped.startswith(g) for g in _GREETING_WORDS):
+            return "greeting"
+        if any(stripped == w or stripped.startswith(w) for w in _CHITCHAT_WORDS):
+            return "chitchat"
+    return None
+
+
 _TRIAGE_SECONDARY_KEYWORDS = {
     "fever", "pain", "breath", "chest", "dizzy", "nausea", "vomiting",
     "headache", "rash", "swelling", "জ্বর", "ব্যথা", "শ্বাস",
@@ -299,12 +335,23 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
             ((entity.name or "") + " " + (entity.value or "")).strip() if entity else ""
         ) or "health question"
 
-        # Inject household member profiles as LLM context when members are mentioned
-        candidates = ([nlu.member] if nlu.member else []) or _extract_members_from_text(nlu.raw_transcript or "")
+        # Build member context
+        # Priority: explicit family-wide question > specific member name > all-member fallback
+        transcript_text = nlu.raw_transcript or ""
+        if _is_family_wide_query(transcript_text):
+            # "is there any issue in my family?" / "what about all members?" → ALL members
+            hh = get_household(db, household_id)
+            candidates = [m.role_label for m in hh.members] if hh else []
+        else:
+            candidates = ([nlu.member] if nlu.member else []) or _extract_members_from_text(transcript_text)
+            if not candidates:
+                hh = get_household(db, household_id)
+                if hh:
+                    candidates = [m.role_label for m in hh.members]
         ctx = _build_member_context(db, household_id, candidates) if candidates else ""
-        
+
         target_member_id = None
-        if candidates:
+        if len(candidates) == 1:
             target_m = db.query(Member).filter(Member.household_id == household_id, Member.role_label.ilike(candidates[0])).first()
             if target_m:
                 target_member_id = target_m.id
@@ -331,21 +378,15 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
             }
         return result
 
-    # ── HOUSEHOLD_STATUS: simple summary ────────────────────────────────────
+    # ── HOUSEHOLD_STATUS: AI health overview of all members ─────────────────
     if intent == "HOUSEHOLD_STATUS":
         hh = get_household(db, household_id)
-        count = len(hh.members) if hh else 0
-        spoken = f"আপনার পরিবারে {count} জন সদস্য আছেন।" if language == "bn" else f"Your family has {count} members."
-        return {
-            "verdict": "INFO",
-            "spoken": spoken,
-            "display": {"title": "Family Status", "conflict": None, "alternative": None,
-                        "detail": spoken, "member": None, "interpreted": _interpreted_text(nlu)},
-            "evidence": {"source": None, "confidence": None, "grounding_score": None},
-            "actions": [],
-            "member_focus": None,
-            "language": language,
-        }
+        all_labels = [m.role_label for m in hh.members] if hh else []
+        ctx = _build_member_context(db, household_id, all_labels)
+        question = nlu.raw_transcript or "Give me a health status overview of all family members, highlighting any serious issues, drug conflicts, or risks."
+        result = run_companion(db, household_id, question, language, member_context=ctx)
+        result.setdefault("display", {})["interpreted"] = _interpreted_text(nlu)
+        return result
 
     # ── LIVE: Report Agent ───────────────────────────────────────────────────
     if intent == "GENERATE_REPORT":
@@ -419,19 +460,27 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
             "report": result,
         }
 
-    # ── UNKNOWN fallback: Companion with member context → friendly intro ─────
+    # ── UNKNOWN fallback: Companion with full family context ─────────────────
     question = nlu.raw_transcript or ""
 
     if question.strip():
-        candidates = ([nlu.member] if nlu.member else []) or _extract_members_from_text(question)
+        if _is_family_wide_query(question):
+            hh = get_household(db, household_id)
+            candidates = [m.role_label for m in hh.members] if hh else []
+        else:
+            candidates = ([nlu.member] if nlu.member else []) or _extract_members_from_text(question)
+            if not candidates:
+                hh = get_household(db, household_id)
+                if hh:
+                    candidates = [m.role_label for m in hh.members]
         ctx = _build_member_context(db, household_id, candidates) if candidates else ""
-        
+
         target_member_id = None
-        if candidates:
+        if len(candidates) == 1:
             target_m = db.query(Member).filter(Member.household_id == household_id, Member.role_label.ilike(candidates[0])).first()
             if target_m:
                 target_member_id = target_m.id
-                
+
         result = run_companion(db, household_id, question, language, member_context=ctx, member_id=target_member_id)
         if result.get("verdict") != "REFUSE":
             result.setdefault("display", {})["interpreted"] = question

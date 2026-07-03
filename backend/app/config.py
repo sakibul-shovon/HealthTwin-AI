@@ -3,6 +3,8 @@ from typing import List
 
 class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
+    # Optional: force a specific Groq model for the brain (tried before the fallback chain).
+    GROQ_BRAIN_MODEL: str = ""
     DATABASE_URL: str = "postgresql://postgres:postgres@127.0.0.1:5433/healthtwin"
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
     # Pattern Agent: dengue-season demo flag + symptom-cluster rolling window

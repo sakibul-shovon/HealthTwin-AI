@@ -42,7 +42,7 @@ export default function Home() {
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropzoneRef = useRef<UploadDropzoneRef>(null);
   const isProcessing = orbState === "thinking" || orbState === "speaking";
-  
+
   const [isManagerOpen, setManagerOpen] = useState(false);
   const [managerMemberId, setManagerMemberId] = useState<number | null>(null);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function Home() {
     });
     getChatHistory().then((history: any[]) => {
       if (history && history.length > 0) {
-        const clientMessages = history.map(msg => ({
+        const clientMessages = history.map((msg) => ({
           id: `db-${msg.id}`,
           role: msg.role as "user" | "assistant",
           text: msg.text,
@@ -71,24 +71,22 @@ export default function Home() {
     });
   }, [setHousehold, setMessages]);
 
-  // ── Core command handler ───────────────────────────────────────────────────
+  // ── Core command handler ──────────────────────────────────────────────────
   const handleCommand = useCallback(
     async (inputTranscript: string, lang: "en" | "bn") => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
       if (!inputTranscript.trim()) return;
-      
-      // Clear speak timeout if barging in
+
       if (speakTimeoutRef.current) {
-          clearTimeout(speakTimeoutRef.current);
-          speakTimeoutRef.current = null;
+        clearTimeout(speakTimeoutRef.current);
+        speakTimeoutRef.current = null;
       }
-      
+
       setTranscript(inputTranscript);
       setOrbState("thinking");
 
-      // Add user message to chat history
       addMessage({
         id: `u-${Date.now()}`,
         role: "user",
@@ -109,7 +107,6 @@ export default function Home() {
         setLastResponse(envelope);
         setOrbState("speaking");
 
-        // Add assistant message to chat history
         addMessage({
           id: `a-${Date.now()}`,
           role: "assistant",
@@ -131,7 +128,7 @@ export default function Home() {
               setOrbState("idle");
             }
           }, 8000);
-          
+
           utterance.onend = () => {
             if (speakTimeoutRef.current) {
               clearTimeout(speakTimeoutRef.current);
@@ -168,7 +165,7 @@ export default function Home() {
     [setOrbState, setLastResponse, setTranscript, addMessage]
   );
 
-  // ── Voice hook ─────────────────────────────────────────────────────────────
+  // ── Voice hook ────────────────────────────────────────────────────────────
   const { isListening, isSTTSupported, startListening, stopListening, speak, cancelSpeech } =
     useVoice({
       onTranscript: handleCommand,
@@ -181,14 +178,13 @@ export default function Home() {
       },
     });
 
-  // ── Orb click ──────────────────────────────────────────────────────────────
+  // ── Orb click ─────────────────────────────────────────────────────────────
   function handleOrbClick() {
     cancelSpeech();
     if (speakTimeoutRef.current) {
       clearTimeout(speakTimeoutRef.current);
       speakTimeoutRef.current = null;
     }
-    
     if (orbState === "listening") {
       stopListening();
       setOrbState("idle");
@@ -204,7 +200,6 @@ export default function Home() {
       clearTimeout(speakTimeoutRef.current);
       speakTimeoutRef.current = null;
     }
-    
     if (orbState === "listening") {
       stopListening();
       setOrbState("idle");
@@ -214,7 +209,7 @@ export default function Home() {
     }
   }
 
-  // ── Action handler ─────────────────────────────────────────────────────────
+  // ── Action handler ────────────────────────────────────────────────────────
   async function handleAction(action: {
     type: string;
     label: string;
@@ -252,16 +247,14 @@ export default function Home() {
   }
 
   const members = household?.members ?? [];
-  const activeMemberId = members.find(m => m.role_label === activeMember)?.id;
+  const activeMemberId = members.find((m) => m.role_label === activeMember)?.id;
   const focusedMember = lastResponse?.member_focus ?? null;
   const alertMembers = lastResponse?.display.members ?? [];
 
   const handleUploadSuccess = async (summary: string) => {
-    // Refresh household so twins show new meds/conditions
     const fresh = await getHousehold();
     if (fresh) setHousehold(fresh);
-    
-    // Add success message
+
     addMessage({
       id: `system-${Date.now()}`,
       role: "assistant",
@@ -275,51 +268,55 @@ export default function Home() {
           detail: summary,
           conflict: null,
           alternative: null,
-          member: activeMemberId ? members.find(m => m.id === activeMemberId)?.role_label ?? null : null,
+          member: activeMemberId
+            ? members.find((m) => m.id === activeMemberId)?.role_label ?? null
+            : null,
           interpreted: "document upload",
         },
         evidence: { source: "System", confidence: "HIGH", grounding_score: null },
         actions: [],
         member_focus: null,
-        language: "en"
-      }
+        language: "en",
+      },
     });
   };
 
   return (
-    <div
-      className="flex flex-col h-screen overflow-hidden"
-      style={{ backgroundColor: "var(--canvas)" }}
-    >
-      <FamilyManager 
-        isOpen={isManagerOpen} 
-        onClose={() => setManagerOpen(false)} 
-        initialMemberId={managerMemberId} 
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--canvas)" }}>
+      <FamilyManager
+        isOpen={isManagerOpen}
+        onClose={() => setManagerOpen(false)}
+        initialMemberId={managerMemberId}
       />
-      {/* Emergency Mode Overlay */}
       <EmergencyMode onAction={handleAction} />
 
-      {/* ── Mobile Twin Panel (bottom sheet, lg:hidden) ──────────────────── */}
+      {/* ── Mobile bottom sheet ──────────────────────────────────────────── */}
       {mobilePanelOpen && (
         <div
           className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end"
-          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
           onClick={() => setMobilePanelOpen(false)}
         >
           <div
-            className="rounded-t-2xl overflow-hidden flex flex-col"
-            style={{ backgroundColor: "var(--surface)", maxHeight: "80vh" }}
+            className="rounded-t-3xl overflow-hidden flex flex-col"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              maxHeight: "82vh",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 shrink-0"
-              style={{ borderBottom: "1px solid var(--surface-sunk)" }}>
+            <div
+              className="flex items-center justify-between px-5 py-3.5 shrink-0"
+              style={{ borderBottom: "1px solid var(--border)" }}
+            >
               <p className="text-sm font-bold" style={{ color: "var(--ink)" }}>
                 {activeMemberId ? "Member Twin" : "Family Constellation"}
               </p>
               <button
                 onClick={() => setMobilePanelOpen(false)}
-                className="text-xs px-2 py-1 rounded-lg"
-                style={{ backgroundColor: "var(--surface-sunk)", color: "var(--ink-soft)" }}
+                className="text-xs px-2.5 py-1 rounded-lg"
+                style={{ background: "var(--surface-sunk)", color: "var(--ink-soft)" }}
                 aria-label="Close panel"
               >
                 ✕
@@ -329,11 +326,11 @@ export default function Home() {
               {activeMemberId ? (
                 <MemberTwin
                   memberId={activeMemberId}
-                  onBack={() => { setActiveMember(null); }}
+                  onBack={() => setActiveMember(null)}
                   onEdit={handleOpenManager}
                 />
               ) : (
-                <div className="flex flex-col items-center p-4">
+                <div className="flex flex-col items-center p-4 gap-4">
                   {members.length > 0 && (
                     <Constellation
                       members={members}
@@ -341,7 +338,7 @@ export default function Home() {
                       activeMember={activeMember}
                       alertMembers={alertMembers}
                       verdict={lastResponse?.verdict ?? null}
-                      onSelect={(label) => { setActiveMember(label); }}
+                      onSelect={(label) => setActiveMember(label)}
                     />
                   )}
                   {lastResponse && (
@@ -355,112 +352,150 @@ export default function Home() {
           </div>
         </div>
       )}
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <header
         className="flex items-center justify-between px-5 py-3 shrink-0 z-20"
         style={{
-          backgroundColor: "var(--primary)",
-          borderBottom: "1px solid var(--primary-deep)",
+          background: "var(--glass)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
         {/* Brand */}
         <div className="flex items-center gap-3">
           <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shadow"
-            style={{ backgroundColor: "var(--accent)", color: "white" }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-lg"
+            style={{
+              background: "linear-gradient(135deg, var(--primary), var(--accent))",
+              color: "var(--canvas)",
+              boxShadow: "0 0 16px rgba(34,211,238,0.3)",
+            }}
           >
             HT
           </div>
           <div>
-            <h1 className="text-sm font-bold leading-tight text-white tracking-wide">
+            <h1
+              className="text-sm font-bold leading-tight tracking-tight"
+              style={{ color: "var(--ink)" }}
+            >
               HealthTwin
             </h1>
-            <p className="text-[10px]" style={{ color: "var(--primary-tint)" }}>
-              Family Command Center
+            <p className="text-[10px] font-medium" style={{ color: "var(--ink-soft)" }}>
+              Family AI Command Center
             </p>
           </div>
         </div>
 
-        {/* Center: status chips */}
+        {/* Status chips */}
         <div className="flex items-center gap-2">
           {isSTTSupported ? (
-            <span className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "var(--well-bg)", color: "var(--well)" }}>
+            <span
+              className="text-[10px] font-medium px-2.5 py-1 rounded-full"
+              style={{ background: "var(--well-bg)", color: "var(--well)" }}
+            >
               Voice ready
             </span>
           ) : (
-            <span className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "var(--watch-bg)", color: "var(--watch)" }}>
+            <span
+              className="text-[10px] font-medium px-2.5 py-1 rounded-full"
+              style={{ background: "var(--watch-bg)", color: "var(--watch)" }}
+            >
               Text-only
             </span>
           )}
           {household && (
-            <span className="text-[10px] px-2.5 py-1 rounded-full hidden sm:block"
-              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}>
+            <span
+              className="text-[10px] font-medium px-2.5 py-1 rounded-full hidden sm:block"
+              style={{ background: "var(--glass-bright)", border: "1px solid var(--border)", color: "var(--ink-soft)" }}
+            >
               {household.name}
             </span>
           )}
         </div>
 
-        {/* Right: mobile twin toggle + clear */}
+        {/* Right controls */}
         <div className="flex items-center gap-2">
-          {/* Show constellation/twin panel on mobile */}
           <button
-            onClick={() => setMobilePanelOpen(v => !v)}
-            className="lg:hidden text-[10px] px-2.5 py-1 rounded-full transition-opacity hover:opacity-80"
-            style={{ backgroundColor: "var(--accent)", color: "white" }}
+            onClick={() => setMobilePanelOpen((v) => !v)}
+            className="lg:hidden text-[10px] font-medium px-2.5 py-1 rounded-full transition-all"
+            style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
             aria-label="Toggle family twin panel"
             aria-expanded={mobilePanelOpen}
           >
-            {mobilePanelOpen ? "✕ Close" : "🏠 Twin"}
+            {mobilePanelOpen ? "✕ Close" : "Twin"}
           </button>
           {messages.length > 0 && (
-            <button onClick={() => { clearChatHistory(); clearMessages(); }}
-              className="text-[10px] px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
-              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}
-              aria-label="Clear chat history">
+            <button
+              onClick={() => { clearChatHistory(); clearMessages(); }}
+              className="text-[10px] font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-70"
+              style={{ background: "var(--glass-bright)", border: "1px solid var(--border)", color: "var(--ink-soft)" }}
+              aria-label="Clear chat history"
+            >
               Clear
             </button>
           )}
         </div>
       </header>
 
-      {/* ── Notifications ───────────────────────────────────────────────────── */}
+      {/* ── Toast notifications ──────────────────────────────────────────── */}
       {notifications.length > 0 && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-xs">
           {notifications.map((n) => (
-            <div key={n.id} className="flex items-start gap-2 rounded-xl px-4 py-3 shadow-xl"
-              style={{ backgroundColor: "var(--primary)", color: "white" }}>
+            <div
+              key={n.id}
+              className="flex items-start gap-2 rounded-2xl px-4 py-3 shadow-2xl glass-bright"
+              style={{ border: "1px solid var(--primary)33" }}
+            >
               <span className="text-xs mt-0.5">🔔</span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold">→ {n.target}</p>
-                <p className="text-[11px] opacity-80 truncate">{n.message}</p>
+                <p className="text-xs font-semibold" style={{ color: "var(--ink)" }}>
+                  → {n.target}
+                </p>
+                <p className="text-[11px] truncate" style={{ color: "var(--ink-soft)" }}>
+                  {n.message}
+                </p>
               </div>
-              <button onClick={() => dismissNotification(n.id)}
-                className="text-[11px] opacity-60 hover:opacity-100 shrink-0">✕</button>
+              <button
+                onClick={() => dismissNotification(n.id)}
+                className="text-[11px] shrink-0 hover:opacity-70"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                ✕
+              </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Body: permanent 3-column layout (D2) ────────────────────────────── */}
+      {/* ── Body: 3-column layout ────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Left: Member Rail */}
-        <div className="hidden md:flex md:flex-col w-56 shrink-0 overflow-y-auto"
-          style={{ borderRight: "1px solid var(--surface-sunk)" }}>
+        {/* Left: icon-only member rail (72px) */}
+        <div
+          className="hidden md:flex md:flex-col overflow-y-auto overflow-x-visible shrink-0"
+          style={{
+            width: 72,
+            background: "var(--surface)",
+          }}
+        >
           {members.length > 0 ? (
-            <MemberRail members={members} activeMember={activeMember} onSelect={setActiveMember} onOpenManager={handleOpenManager} />
+            <MemberRail
+              members={members}
+              activeMember={activeMember}
+              onSelect={setActiveMember}
+              onOpenManager={handleOpenManager}
+            />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <p className="text-xs" style={{ color: "var(--ink-faint)" }}>Loading family…</p>
+              <div className="w-8 h-8 rounded-full animate-pulse" style={{ background: "var(--surface-sunk)" }} />
             </div>
           )}
         </div>
 
         {/* Center: Chat + Orb + Voice input */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-
           <UploadDropzone ref={dropzoneRef} onUploadSuccess={handleUploadSuccess}>
             {/* Chat history */}
             <div className="flex-1 overflow-hidden">
@@ -472,37 +507,46 @@ export default function Home() {
             </div>
           </UploadDropzone>
 
-          {/* ── Orb + status + voice input ────────────────────────────────── */}
-          <div className="shrink-0 flex flex-col items-center gap-2 px-4 pb-4 pt-3"
-            style={{ borderTop: "1px solid var(--surface-sunk)" }}>
-
-            {/* Orb row: orb (md) + status text side-by-side */}
+          {/* ── Voice zone ─────────────────────────────────────────────── */}
+          <div
+            className="shrink-0 flex flex-col items-center gap-3 px-5 pb-5 pt-4"
+            style={{ borderTop: "1px solid var(--border)" }}
+          >
+            {/* Orb row */}
             <div className="flex items-center gap-4 w-full">
               <VoiceOrb size="md" onClick={handleOrbClick} />
-              <div className="flex flex-col min-w-0 flex-1">
-                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }} aria-live="polite">
+              <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: "var(--ink)" }}
+                  aria-live="polite"
+                >
                   {orbState === "listening" && "Listening…"}
-                  {orbState === "thinking" && "Processing your request…"}
+                  {orbState === "thinking" && "Processing…"}
                   {orbState === "speaking" && "Speaking…"}
-                  {orbState === "error"    && "Didn't catch that — please try again"}
-                  {orbState === "idle"     && (isListening ? "Listening…" : "Ready to listen")}
+                  {orbState === "error" && "Didn't catch that"}
+                  {orbState === "idle" && (isListening ? "Listening…" : "Ready to listen")}
                 </p>
                 {transcript && (
-                  <p className="text-[11px] italic truncate"
-                    style={{ color: "var(--ink-faint)" }}>
+                  <p
+                    className="text-[11px] italic truncate"
+                    style={{ color: "var(--ink-soft)" }}
+                  >
                     &ldquo;{transcript}&rdquo;
                   </p>
                 )}
                 {focusedMember && (
-                  <span className="text-[10px] mt-0.5 inline-flex items-center gap-1 font-medium w-fit px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: "var(--accent-glow)", color: "var(--accent-deep)" }}>
+                  <span
+                    className="text-[10px] font-medium w-fit px-2 py-0.5 rounded-full mt-0.5"
+                    style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
+                  >
                     Focus: {focusedMember}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Voice panel (text input + chips) */}
+            {/* Voice input panel */}
             <VoicePanel
               onSubmit={handleCommand}
               isListening={isListening}
@@ -514,17 +558,35 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right: Twin panel — Constellation + Verdict (always visible) */}
-        <div className="hidden lg:flex flex-col w-80 shrink-0 overflow-hidden bg-white z-10"
-          style={{ borderLeft: "1px solid var(--surface-sunk)" }}>
-          
+        {/* Right: Constellation + Verdict panel */}
+        <div
+          className="hidden lg:flex flex-col w-80 shrink-0 overflow-hidden"
+          style={{
+            borderLeft: "1px solid var(--border)",
+            background: "var(--surface)",
+          }}
+        >
           {activeMemberId ? (
-            <MemberTwin memberId={activeMemberId} onBack={() => setActiveMember(null)} onEdit={handleOpenManager} />
+            <MemberTwin
+              memberId={activeMemberId}
+              onBack={() => setActiveMember(null)}
+              onEdit={handleOpenManager}
+            />
           ) : (
             <div className="flex flex-col h-full overflow-y-auto">
-              {/* Constellation */}
-              <div className="flex items-center justify-center p-4 shrink-0">
-                {members.length > 0 && (
+              {/* Constellation hero */}
+              <div
+                className="flex items-center justify-center p-6 shrink-0 relative dot-grid"
+                style={{ minHeight: 220 }}
+              >
+                {/* Radial glow behind constellation */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(34,211,238,0.06) 0%, transparent 70%)",
+                  }}
+                />
+                {members.length > 0 ? (
                   <Constellation
                     members={members}
                     focusedMember={focusedMember}
@@ -533,16 +595,25 @@ export default function Home() {
                     verdict={lastResponse?.verdict ?? null}
                     onSelect={setActiveMember}
                   />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 opacity-40">
+                    <div className="w-3 h-3 rounded-full" style={{ background: "var(--primary)" }} />
+                    <p className="text-[10px]" style={{ color: "var(--ink-soft)" }}>
+                      Loading…
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <div style={{ borderTop: "1px solid var(--surface-sunk)" }} />
+              <div style={{ borderTop: "1px solid var(--border)" }} />
 
-              {/* Verdict or Overview */}
+              {/* Verdict or overview */}
               {lastResponse ? (
-                <div className="p-4 flex flex-col gap-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest"
-                    style={{ color: "var(--ink-faint)" }}>
+                <div className="p-4 flex flex-col gap-3 overflow-y-auto flex-1 scrollbar-thin">
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-widest"
+                    style={{ color: "var(--ink-soft)" }}
+                  >
                     Latest Verdict
                   </p>
                   <VerdictCard
@@ -551,14 +622,31 @@ export default function Home() {
                   />
                 </div>
               ) : (
-                <div className="p-6 flex flex-col items-center justify-center text-center gap-2 flex-1 opacity-70">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-inner mb-2"
-                    style={{ backgroundColor: "var(--surface-sunk)", color: "var(--ink-faint)" }}>
-                    🏠
+                <div className="p-6 flex flex-col items-center justify-center text-center gap-3 flex-1">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg shadow-inner"
+                    style={{
+                      background: "linear-gradient(135deg, var(--primary), var(--accent))",
+                      color: "var(--canvas)",
+                      boxShadow: "0 0 30px rgba(34,211,238,0.2)",
+                    }}
+                  >
+                    HT
                   </div>
-                  <h3 className="text-sm font-bold" style={{ color: "var(--ink)" }}>{household?.name || "Family Overview"}</h3>
-                  <p className="text-xs" style={{ color: "var(--ink-faint)" }}>{members.length} members tracked</p>
-                  <p className="text-[10px] mt-4 max-w-[200px]" style={{ color: "var(--ink-faint)" }}>Select a member from the rail or constellation to view their AI digital twin.</p>
+                  <div>
+                    <h3 className="text-sm font-bold" style={{ color: "var(--ink)" }}>
+                      {household?.name || "Family Overview"}
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                      {members.length} member{members.length !== 1 ? "s" : ""} tracked
+                    </p>
+                  </div>
+                  <p
+                    className="text-[10px] max-w-[190px] leading-relaxed"
+                    style={{ color: "var(--ink-soft)" }}
+                  >
+                    Select a member to view their AI digital twin, or ask a question to see the verdict here.
+                  </p>
                 </div>
               )}
             </div>

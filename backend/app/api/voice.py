@@ -5,12 +5,13 @@ from typing import Optional
 
 from app.graph.database import get_db
 from app.graph.models import Household
-from app.voice.nlu import parse_command
-from app.voice.pending import store_pending, retrieve_pending, clear_pending
-from app.agents.router import route
+from app.voice.nlu import detect_bengali
+from app.voice.pending import retrieve_pending, clear_pending
+from app.agents.brain import run_brain
 from app.agents.composer import compose
 from app.agents.profile import run_profile_write
 from app.agents.care import set_reminder_from_nlu
+from app.spine.emergency import scan_red_flags, build_emergency_envelope
 from app.memory.chat_store import save_turn, get_recent
 
 _CARE_WRITE_INTENTS = {"SET_REMINDER"}
@@ -38,83 +39,49 @@ class ConfirmRequest(BaseModel):
 @router.post("/command")
 def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
     household_id = _get_household_id(db)
-    
+    language = "bn" if (req.language == "bn" or detect_bengali(req.transcript)) else "en"
+
+    # ── Recent turns → chat history for the brain (oldest→newest) ─────────────
     recent_turns = get_recent(db, household_id, limit=6)
-    context_lines = []
-    last_member_focus = None
-    for turn in recent_turns:
-        context_lines.append(f"{turn.role.capitalize()}: {turn.text}")
-        if turn.role == "assistant" and turn.member_focus:
-            last_member_focus = turn.member_focus
-            
-    context_str = "\n".join(context_lines)
-    
-    nlu = parse_command(
-        req.transcript, 
-        language_hint=req.language,
-        context=context_str,
-        last_member_focus=last_member_focus
-    )
+    history = [
+        {"role": t.role, "content": t.text}
+        for t in reversed(recent_turns)
+        if t.role in ("user", "assistant") and t.text
+    ]
 
-    is_followup = False
-    if recent_turns and recent_turns[0].role == "assistant" and recent_turns[0].envelope and recent_turns[0].envelope.get("verdict") == "CLARIFY":
-        is_followup = True
-
-    try:
-        raw = route(db, household_id, nlu, nlu.language, is_followup=is_followup)
-    except Exception:
-        lang = nlu.language
-        return {
-            "verdict": "REFUSE",
-            "spoken": ("একটি সমস্যা হয়েছে। আবার চেষ্টা করুন।" if lang == "bn"
-                       else "Something went wrong processing your request. Please try again."),
-            "display": {"title": "Error", "conflict": None, "alternative": None,
-                        "detail": "Internal error", "member": None, "interpreted": None},
-            "evidence": {"source": None, "confidence": None, "grounding_score": None},
-            "actions": [],
-            "member_focus": None,
-            "language": lang,
-        }
-
-    # Store pending write commands before composing
-    pending_id = None
-    if nlu.needs_confirmation:
-        pending_id = store_pending(nlu)
-        raw.setdefault("actions", [])
-        # Patch existing confirm_write action with pending_id
-        for action in raw["actions"]:
-            if action.get("type") == "confirm_write":
-                action["pending_id"] = pending_id
-        raw["pending_id"] = pending_id
-        raw["needs_confirmation"] = True
+    # ── Hard emergency pre-filter (never trust the LLM to catch a red flag) ───
+    red_flag = scan_red_flags(req.transcript or "")
+    if red_flag:
+        raw = build_emergency_envelope(db, household_id, red_flag, None, language)
+    else:
+        try:
+            raw = run_brain(db, household_id, req.transcript, language, history=history)
+        except Exception:
+            return {
+                "verdict": "REFUSE",
+                "spoken": ("একটি সমস্যা হয়েছে। আবার চেষ্টা করুন।" if language == "bn"
+                           else "Something went wrong processing your request. Please try again."),
+                "display": {"title": "Error", "conflict": None, "alternative": None,
+                            "detail": "Internal error", "member": None, "interpreted": None},
+                "evidence": {"source": None, "confidence": None, "grounding_score": None},
+                "actions": [],
+                "member_focus": None,
+                "language": language,
+            }
 
     envelope = compose(raw, interpreted=raw.get("display", {}).get("interpreted"))
-    envelope["intent"] = nlu.intent
-    envelope["needs_confirmation"] = nlu.needs_confirmation
-    if pending_id:
-        envelope["pending_id"] = pending_id
+    # The brain sets needs_confirmation/pending_id itself for prepare_* writes.
+    envelope.setdefault("needs_confirmation", raw.get("needs_confirmation", False))
+    if raw.get("pending_id"):
+        envelope["pending_id"] = raw["pending_id"]
 
     try:
-        # Save user turn
-        save_turn(
-            db=db, 
-            household_id=household_id, 
-            role="user", 
-            text=req.transcript, 
-            language=nlu.language
-        )
-        
-        # Save assistant turn
-        save_turn(
-            db=db,
-            household_id=household_id,
-            role="assistant",
-            text=envelope.get("spoken", ""),
-            envelope=envelope,
-            intent=envelope.get("intent"),
-            member_focus=envelope.get("member_focus"),
-            language=envelope.get("language", "en")
-        )
+        save_turn(db=db, household_id=household_id, role="user",
+                  text=req.transcript, language=language)
+        save_turn(db=db, household_id=household_id, role="assistant",
+                  text=envelope.get("spoken", ""), envelope=envelope,
+                  intent=envelope.get("intent"), member_focus=envelope.get("member_focus"),
+                  language=envelope.get("language", "en"))
     except Exception as e:
         print(f"Persistence error: {e}")
 

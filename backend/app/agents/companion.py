@@ -50,16 +50,29 @@ def _llm_answer(question: str, language: str, member_context: str = "") -> str |
     """Ask Llama directly. member_context injects household profile data when available."""
     if not settings.GROQ_API_KEY:
         return None
+    member_count = member_context.count("\n- ") + (1 if member_context.startswith("- ") else 0)
+    is_multi_member = member_count > 1
+
     if member_context:
-        system = (
-            f"You are HealthTwin, a family health assistant with access to the family's health records.\n"
-            f"Family member profiles:\n{member_context}\n\n"
-            f"Answer questions using this real data. Be specific and personal. "
-            f"Keep answers under 100 words. End with: 'Consult a doctor for personal advice.'"
-            if language != "bn" else
-            f"আপনি HealthTwin। পারিবারিক তথ্য:\n{member_context}\n\n"
-            f"এই তথ্য ব্যবহার করে উত্তর দিন। ৮০ শব্দের মধ্যে রাখুন। শেষে: 'ডাক্তার দেখান।'"
-        )
+        if language == "bn":
+            system = (
+                f"আপনি HealthTwin। পারিবারিক তথ্য:\n{member_context}\n\n"
+                f"এই তথ্য ব্যবহার করে উত্তর দিন। "
+                + ("প্রতিটি সদস্যের বিষয়ে আলাদাভাবে বলুন — কারো ঝুঁকি বা সমস্যা থাকলে উল্লেখ করুন। " if is_multi_member else "")
+                + "১৫০ শব্দের মধ্যে রাখুন। শেষে: 'ডাক্তার দেখান।'"
+            )
+        else:
+            system = (
+                f"You are HealthTwin, a family health assistant with access to the family's real health records.\n"
+                f"Family member profiles:\n{member_context}\n\n"
+                + (
+                    "IMPORTANT: Cover ALL members listed above. For each member, note any serious conditions, "
+                    "risky medications, drug interactions, or health flags. Be specific — use their names and real data. "
+                    if is_multi_member else
+                    "Answer using the member's real data. Be specific and personal. "
+                )
+                + "Keep answer under 200 words. End with: 'Consult a doctor for personal advice.'"
+            )
     else:
         system = (
             "You are HealthTwin, a knowledgeable family health assistant. "
@@ -77,33 +90,32 @@ def _llm_answer(question: str, language: str, member_context: str = "") -> str |
                       {"role": "user", "content": question}],
             model="llama-3.3-70b-versatile",
             temperature=0.3,
-            max_tokens=250,
+            max_tokens=400 if (member_context and is_multi_member) else 250,
         )
         return resp.choices[0].message.content.strip()
     except Exception:
         return None
 
 
-def run_companion(db: Session, household_id: int, question: str, language: str, member_context: str = "", member_id: int = None) -> dict:
+def run_companion(db: Session, _household_id: int, question: str, language: str, member_context: str = "", member_id: int = None) -> dict:
     lang = language
 
-    # Path A: member context provided
+    # Path A: member context provided — the AI already has the real family data.
+    # Use LLM directly so it can answer questions about the family's own records.
+    # Gate 2 (knowledge corpus) is only useful for external medical facts, NOT for
+    # "what meds does Baba take?" or "is there any issue in my family?" queries.
     if member_context:
-        if _is_clinical(question):
-            # Clinical + member context: Gate 2 first; refuse if insufficient
-            answer = grounded_explain(question, member_id=member_id)
-            if answer.band != "LOW" and answer.evidence is not None:
-                _write_trace(db, passed=True, source=answer.evidence.source, score=answer.evidence.grounding_score)
-                return _build_grounded_response(answer, question, lang)
-            spoken = _REFUSE_BN if lang == "bn" else _REFUSE_EN
-            _write_trace(db, passed=False)
-            return _build_refuse(spoken, question, lang)
-        else:
-            # Non-clinical + member context: LLM allowed, marked unverified
-            llm_text = _llm_answer(question, lang, member_context)
-            if llm_text:
-                _write_trace(db, passed=True)
-                return _build_unverified_info(llm_text, question, lang)
+        llm_text = _llm_answer(question, lang, member_context)
+        if llm_text:
+            _write_trace(db, passed=True)
+            # Grounded clinical check: if asking an external safety fact AND we
+            # have document grounding available, blend it in
+            if _is_clinical(question) and member_id is not None:
+                answer = grounded_explain(question, member_id=member_id)
+                if answer.band != "LOW" and answer.evidence is not None:
+                    _write_trace(db, passed=True, source=answer.evidence.source, score=answer.evidence.grounding_score)
+                    return _build_grounded_response(answer, question, lang)
+            return _build_unverified_info(llm_text, question, lang)
 
     # Path B: no member context — Gate 2 first
     answer = grounded_explain(question, member_id=member_id)

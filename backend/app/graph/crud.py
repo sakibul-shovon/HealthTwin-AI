@@ -162,6 +162,12 @@ def add_member(db: Session, household_id: int, data: dict) -> models.Member:
     return member
 
 def add_medication(db: Session, member_id: int, name: str, dose: str) -> models.Medication:
+    existing = db.query(models.Medication).filter(
+        models.Medication.member_id == member_id,
+        models.Medication.name.ilike(name.strip()),
+    ).first()
+    if existing:
+        return existing
     med = models.Medication(member_id=member_id, name=name, dose=dose or "—")
     db.add(med)
     db.commit()
@@ -173,6 +179,12 @@ def add_medication(db: Session, member_id: int, name: str, dose: str) -> models.
     return med
 
 def add_condition(db: Session, member_id: int, name: str) -> models.Condition:
+    existing = db.query(models.Condition).filter(
+        models.Condition.member_id == member_id,
+        models.Condition.name.ilike(name.strip()),
+    ).first()
+    if existing:
+        return existing
     cond = models.Condition(member_id=member_id, name=name)
     db.add(cond)
     db.commit()

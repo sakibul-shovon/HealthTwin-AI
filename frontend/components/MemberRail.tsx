@@ -1,6 +1,7 @@
 "use client";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { HouseholdMember } from "@/lib/types";
+import { useState, useRef } from "react";
 
 interface Props {
   members: HouseholdMember[];
@@ -9,127 +10,174 @@ interface Props {
   onOpenManager?: (id?: number) => void;
 }
 
-const FLAG_LABELS: Record<string, string> = {
-  kidney_impaired: "Kidney ⚠",
-  liver_impaired: "Liver ⚠",
-  pregnant: "Pregnant",
-};
+const INITIALS_BG = [
+  "from-cyan-500 to-cyan-700",
+  "from-violet-500 to-violet-700",
+  "from-emerald-500 to-emerald-700",
+  "from-amber-500 to-amber-700",
+  "from-rose-500 to-rose-700",
+  "from-indigo-500 to-indigo-700",
+];
+
+function getRingColor(m: HouseholdMember): string {
+  if (m.kidney_impaired || m.liver_impaired) return "var(--watch)";
+  if (m.pregnant) return "var(--info)";
+  if (m.allergies?.length > 0) return "var(--urgent)";
+  return "var(--well)";
+}
+
+function MemberTooltip({ m }: { m: HouseholdMember }) {
+  const flags: string[] = [];
+  if (m.kidney_impaired) flags.push("Kidney");
+  if (m.liver_impaired) flags.push("Liver");
+  if (m.pregnant) flags.push("Pregnant");
+
+  return (
+    <div
+      className="glass-bright rounded-xl px-3.5 py-2.5 whitespace-nowrap shadow-2xl z-50 pointer-events-none"
+      style={{ minWidth: 140 }}
+    >
+      <p className="text-xs font-bold leading-tight" style={{ color: "var(--ink)" }}>
+        {m.role_label}
+      </p>
+      <p className="text-[10px] mt-0.5" style={{ color: "var(--ink-soft)" }}>
+        {m.age ? `${m.age}y · ` : ""}
+        {m.sex === "M" ? "Male" : m.sex === "F" ? "Female" : "Unknown"}
+      </p>
+      {m.medications?.length > 0 && (
+        <p className="text-[10px] mt-1 font-medium" style={{ color: "var(--primary)" }}>
+          {m.medications.length} medication{m.medications.length > 1 ? "s" : ""}
+        </p>
+      )}
+      {flags.length > 0 && (
+        <p className="text-[10px] mt-0.5" style={{ color: "var(--watch)" }}>
+          ⚠ {flags.join(", ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+interface TooltipState {
+  memberId: number;
+  y: number;
+}
 
 export default function MemberRail({ members, activeMember, onSelect, onOpenManager }: Props) {
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const railRef = useRef<HTMLElement>(null);
+
+  function handleMouseEnter(e: React.MouseEvent<HTMLDivElement>, id: number) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({ memberId: id, y: rect.top + rect.height / 2 });
+  }
+
   return (
-    <aside className="flex flex-col gap-3 overflow-y-auto py-4 px-3">
-      <div className="flex justify-between items-center mb-1">
-        <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--ink-faint)" }}>
-          Family
-        </h2>
-        <button onClick={() => onOpenManager && onOpenManager()} className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
-          + Add
-        </button>
-      </div>
-      {members.map((m) => {
+    <aside
+      ref={railRef}
+      className="flex flex-col items-center gap-3 py-5 px-2 overflow-y-auto"
+      style={{ borderRight: "1px solid var(--border)" }}
+    >
+      {/* Add member button */}
+      <motion.button
+        onClick={() => onOpenManager?.()}
+        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-light transition-colors mb-1"
+        style={{
+          color: "var(--ink-soft)",
+          border: "1.5px dashed var(--border-bright)",
+          background: "transparent",
+        }}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.94 }}
+        aria-label="Add family member"
+        title="Add member"
+      >
+        +
+      </motion.button>
+
+      {/* Member avatars */}
+      {members.map((m, idx) => {
         const active = m.role_label === activeMember;
-        const flags: string[] = [];
-        if (m.kidney_impaired) flags.push(FLAG_LABELS.kidney_impaired);
-        if (m.liver_impaired) flags.push(FLAG_LABELS.liver_impaired);
-        if (m.pregnant) flags.push(FLAG_LABELS.pregnant);
+        const hasFlag = m.kidney_impaired || m.liver_impaired || m.pregnant;
+        const hasAllergy = m.allergies?.length > 0;
+        const ringColor = getRingColor(m);
+        const gradClass = INITIALS_BG[idx % INITIALS_BG.length];
 
         return (
-          <motion.button
+          <div
             key={m.id}
-            onClick={() => onSelect(m.role_label)}
-            className="w-full text-left rounded-xl p-3 transition-colors relative group"
-            style={{
-              backgroundColor: active ? "var(--primary-tint)" : "var(--surface)",
-              border: `1.5px solid ${active ? "var(--primary)" : "var(--surface-sunk)"}`,
-            }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            onMouseEnter={(e) => handleMouseEnter(e, m.id)}
+            onMouseLeave={() => setTooltip(null)}
           >
-            <div className="flex items-center gap-2 mb-1">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{
-                  backgroundColor: active ? "var(--primary)" : "var(--surface-sunk)",
-                  color: active ? "white" : "var(--ink)",
-                }}
-              >
-                {m.role_label[0]}
-              </div>
-              <div>
-                <p className="text-sm font-semibold leading-tight" style={{ color: "var(--ink)" }}>
-                  {m.role_label}
-                </p>
-                <p className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                  {m.age}y · {m.sex === "M" ? "Male" : m.sex === "F" ? "Female" : "Unknown"}
-                </p>
-              </div>
-              <div className="flex-1"></div>
-              <button 
-                onClick={(e) => { e.stopPropagation(); onOpenManager && onOpenManager(m.id); }}
-                className="text-[14px] px-2 text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                ⋯
-              </button>
-            </div>
+            <motion.button
+              onClick={() => onSelect(m.role_label)}
+              className={`relative w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 bg-gradient-to-br ${gradClass}`}
+              style={{
+                boxShadow: active
+                  ? `0 0 0 2px var(--canvas), 0 0 0 3.5px var(--primary), 0 0 18px rgba(34,211,238,0.35)`
+                  : `0 0 0 2px var(--canvas), 0 0 0 2px ${ringColor}22`,
+                opacity: active ? 1 : 0.7,
+                color: "white",
+                textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+              }}
+              whileHover={{ scale: 1.12, opacity: 1 }}
+              whileTap={{ scale: 0.95 }}
+              aria-label={`Select ${m.role_label}`}
+              aria-pressed={active}
+            >
+              {m.role_label[0].toUpperCase()}
 
-            {m.medications.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {m.medications.map((med) => (
-                  <span
-                    key={med.name}
-                    className="text-[10px] px-1.5 py-0.5 rounded-full font-mono-num"
-                    style={{ backgroundColor: "var(--primary-tint)", color: "var(--primary-deep)" }}
-                  >
-                    {med.name}
-                  </span>
-                ))}
-              </div>
-            )}
+              {/* Flag dot */}
+              {(hasFlag || hasAllergy) && !active && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+                  style={{
+                    backgroundColor: hasAllergy ? "var(--urgent)" : "var(--watch)",
+                    borderColor: "var(--canvas)",
+                  }}
+                />
+              )}
 
-            {flags.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {flags.map((f) => (
-                  <span
-                    key={f}
-                    className="text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ backgroundColor: "var(--watch-bg)", color: "var(--watch)" }}
-                  >
-                    {f}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {m.allergies.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {m.allergies.map((a) => (
-                  <span
-                    key={a.substance}
-                    className="text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ backgroundColor: "var(--urgent-bg)", color: "var(--urgent)" }}
-                  >
-                    Allergy: {a.substance}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {m.reminders && m.reminders.filter(r => r.active).length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {m.reminders.filter(r => r.active).map((r) => (
-                  <span
-                    key={r.id}
-                    className="text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ backgroundColor: "var(--info-bg, #e8f4fd)", color: "var(--info, #1a6fa8)" }}
-                  >
-                    ⏰ {r.time}
-                  </span>
-                ))}
-              </div>
-            )}
-          </motion.button>
+              {/* Medication dot */}
+              {m.medications?.length > 0 && !hasFlag && !hasAllergy && !active && (
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border-2"
+                  style={{ backgroundColor: "var(--primary)", borderColor: "var(--canvas)" }}
+                />
+              )}
+            </motion.button>
+          </div>
         );
       })}
+
+      {/* Fixed-position tooltip — renders outside overflow-hidden parents */}
+      <AnimatePresence>
+        {tooltip && (() => {
+          const m = members.find((x) => x.id === tooltip.memberId);
+          if (!m) return null;
+          return (
+            <motion.div
+              key={tooltip.memberId}
+              className="glass-bright rounded-xl shadow-2xl pointer-events-none"
+              style={{
+                position: "fixed",
+                left: 80,
+                top: tooltip.y,
+                transform: "translateY(-50%)",
+                zIndex: 9999,
+                minWidth: 148,
+                padding: "10px 14px",
+              }}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.14 }}
+            >
+              <MemberTooltip m={m} />
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </aside>
   );
 }

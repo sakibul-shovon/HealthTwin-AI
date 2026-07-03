@@ -107,7 +107,21 @@ def confirm_upload(
             extracted["conditions"] = req.edits["conditions"]
             
     # Write to DB
-    # 1. Add Document record
+    # 1. Add Document record — skip if exact same filename+kind already uploaded
+    existing_doc = db.query(models.Document).filter(
+        models.Document.member_id == member_id,
+        models.Document.filename == pending["filename"],
+        models.Document.kind == pending["kind"],
+    ).first()
+    if existing_doc:
+        clear_pending(req.pending_id)
+        return {
+            "status": "already_exists",
+            "household_refresh": False,
+            "document_id": existing_doc.id,
+            "summary": f"'{pending['filename']}' was already uploaded for this member — no changes made.",
+        }
+
     doc = models.Document(
         member_id=member_id,
         household_id=member.household_id,

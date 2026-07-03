@@ -4,29 +4,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design Tokens ────────────────────────────────────────────────────────── */
 :root {
-  --canvas:#F6F3ED; --surface:#FCFAF6; --surface-sunk:#EEEAE1;
-  --primary:#0F4C55; --primary-tint:#D7E7E3; --primary-deep:#0A363D;
-  --accent:#E89A3C; --accent-deep:#C9741E; --accent-glow:#F4C486;
-  --ink:#16262A; --ink-soft:#5A6B6E; --ink-faint:#94A3A4;
-  --well:#2E7D5B; --well-bg:#E0EFE7; --watch:#DFA100; --watch-bg:#FBF0D3;
-  --urgent:#D1495B; --urgent-bg:#F8E1E4; --info:#3A7CA5;
-  --info-bg:#DFF0F8;
+  /* Canvas */
+  --canvas:        #020818;
+  --surface:       #0B1120;
+  --surface-sunk:  #131C30;
+
+  /* Primary — Cyan */
+  --primary:       #22D3EE;
+  --primary-tint:  rgba(34,211,238,0.10);
+  --primary-deep:  #06B6D4;
+
+  /* Accent — Purple */
+  --accent:        #A78BFA;
+  --accent-deep:   #7C3AED;
+  --accent-glow:   rgba(167,139,250,0.20);
+
+  /* Text */
+  --ink:           #E2E8F0;
+  --ink-soft:      #64748B;
+  --ink-faint:     #1E293B;
+
+  /* Status */
+  --well:          #34D399;
+  --well-bg:       rgba(52,211,153,0.10);
+  --watch:         #FBBF24;
+  --watch-bg:      rgba(251,191,36,0.10);
+  --urgent:        #F87171;
+  --urgent-bg:     rgba(248,113,113,0.10);
+  --info:          #818CF8;
+  --info-bg:       rgba(129,140,248,0.10);
+
+  /* Glass */
+  --glass:         rgba(255,255,255,0.04);
+  --glass-bright:  rgba(255,255,255,0.07);
+  --border:        rgba(255,255,255,0.07);
+  --border-bright: rgba(255,255,255,0.13);
 }
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   background: var(--canvas);
   color: var(--ink);
   font-family: 'Hanken Grotesk', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Bricolage Grotesque', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .font-bn {
   font-family: 'Hind Siliguri', sans-serif;
-  line-height: 1.6;
+  line-height: 1.7;
   letter-spacing: 0;
 }
 
@@ -35,63 +70,88 @@ h1, h2, h3, h4, h5, h6 {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Accessibility ───────────────────────────────────────────────────────── */
+/* ── Glassmorphism Utilities ─────────────────────────────────────────────── */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+}
 
-/* Visible keyboard focus ring */
+.glass-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.glass-bright {
+  background: var(--glass-bright);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-bright);
+}
+
+/* ── Glow Effects ────────────────────────────────────────────────────────── */
+.glow-cyan   { box-shadow: 0 0 24px rgba(34,211,238,0.30), 0 0 80px rgba(34,211,238,0.08); }
+.glow-safe   { box-shadow: 0 0 20px rgba(52,211,153,0.25); }
+.glow-danger { box-shadow: 0 0 28px rgba(248,113,113,0.35), 0 0 60px rgba(248,113,113,0.10); }
+.glow-watch  { box-shadow: 0 0 20px rgba(251,191,36,0.25); }
+.glow-purple { box-shadow: 0 0 24px rgba(167,139,250,0.25); }
+
+/* ── Dot Grid Background ─────────────────────────────────────────────────── */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── Noise Texture ───────────────────────────────────────────────────────── */
+.noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.4;
+  border-radius: inherit;
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-sunk); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+
+.custom-scrollbar::-webkit-scrollbar { width: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--ink-faint); border-radius: 2px; }
+.scrollbar-thin::-webkit-scrollbar { width: 3px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--ink-faint); }
+
+/* ── Accessibility ───────────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 4px;
 }
+:focus:not(:focus-visible) { outline: none; }
 
-/* Remove focus ring for mouse users */
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Respect reduced-motion preference — collapse animations, keep color state */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.15ms !important;
   }
-  /* Framer Motion respects this automatically via its reducedMotion config,
-     but the above ensures CSS animations also stop. */
 }
 
-/* ── Mobile layout helpers ───────────────────────────────────────────────── */
-
-/* Ensure bottom-sheet verdict is scrollable on small screens */
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  .verdict-panel-mobile {
-    max-height: 45vh;
-    overflow-y: auto;
-  }
-  /* Prevent horizontal overflow on narrow viewports */
-  body {
-    overflow-x: hidden;
-  }
+  body { overflow-x: hidden; }
+  .verdict-panel-mobile { max-height: 45vh; overflow-y: auto; }
 }
 
-/* ── Scrollbar polish ────────────────────────────────────────────────────── */
-.custom-scrollbar::-webkit-scrollbar,
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track,
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb,
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: var(--surface-sunk);
-  border-radius: 2px;
-}
-
-/* ── Print stylesheet (for report export) ───────────────────────────────── */
+/* ── Print (report export) ───────────────────────────────────────────────── */
 @media print {
   header, nav, aside, .no-print { display: none !important; }
-  body { background: white; color: black; font-size: 12pt; }
-  a { color: black; text-decoration: underline; }
+  body { background: white; color: black; font-size: 12pt; overflow: auto; }
 }
