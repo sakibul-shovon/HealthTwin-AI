@@ -49,13 +49,15 @@ h1, h2, h3, h4, h5, h6 {
   outline: none;
 }
 
-/* Respect reduced-motion preference */
+/* Respect reduced-motion preference — collapse animations, keep color state */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0.15ms !important;
   }
+  /* Framer Motion respects this automatically via its reducedMotion config,
+     but the above ensures CSS animations also stop. */
 }
 
 /* ── Mobile layout helpers ───────────────────────────────────────────────── */
@@ -66,4 +68,30 @@ h1, h2, h3, h4, h5, h6 {
     max-height: 45vh;
     overflow-y: auto;
   }
+  /* Prevent horizontal overflow on narrow viewports */
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* ── Scrollbar polish ────────────────────────────────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track,
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb,
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--surface-sunk);
+  border-radius: 2px;
+}
+
+/* ── Print stylesheet (for report export) ───────────────────────────────── */
+@media print {
+  header, nav, aside, .no-print { display: none !important; }
+  body { background: white; color: black; font-size: 12pt; }
+  a { color: black; text-decoration: underline; }
 }

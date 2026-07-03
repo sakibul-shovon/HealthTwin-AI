@@ -5,9 +5,14 @@ from app.graph.crud import (
     add_member,
     add_medication,
     add_condition,
-    add_allergy,
     log_symptom,
     update_member_flags,
+    remove_member,
+    remove_medication,
+    remove_condition,
+    remove_allergy,
+    rename_member,
+    merge_members,
 )
 
 # Condition names that map to boolean flags on Member
@@ -64,17 +69,47 @@ def run_profile_write(db: Session, household_id: int, nlu: NluResult) -> dict:
             en=f"Couldn't find member '{member_label}'.")
         return _error(spoken, lang, member_label)
 
+    # ── REMOVE_MEMBER ────────────────────────────────────────────────────────
+    if intent == "REMOVE_MEMBER":
+        remove_member(db, member.id)
+        spoken = _bi(lang,
+            bn=f"{member.role_label} কে পরিবার থেকে মুছে ফেলা হয়েছে।",
+            en=f"{member.role_label} has been removed from the family.")
+        return _confirmed(spoken, lang, None, f"Removed {member.role_label}.", household_refresh=True)
+
+    # ── MERGE_MEMBERS ────────────────────────────────────────────────────────
+    if intent == "MERGE_MEMBERS":
+        # we expect entity.value to be the keep_member's label (or vice versa).
+        # We will assume nlu.member is the one to KEEP and entity.name is the one to REMOVE.
+        remove_label = entity_name
+        remove_m = resolve_member(db, household_id, remove_label or "")
+        if remove_m:
+            merge_members(db, member.id, remove_m.id)
+            spoken = _bi(lang,
+                bn=f"{remove_m.role_label} কে {member.role_label} এর সাথে মার্জ করা হয়েছে।",
+                en=f"Merged {remove_m.role_label} into {member.role_label}.")
+            return _confirmed(spoken, lang, member.role_label, f"Merged {remove_m.role_label} into {member.role_label}.", household_refresh=True)
+        else:
+            return _error(_bi(lang, "সদস্য পাওয়া যায়নি।", "Member to merge not found."), lang, member.role_label)
+
     # ── UPDATE_MEDICATION ────────────────────────────────────────────────────
     if intent == "UPDATE_MEDICATION":
         drug = entity_name or "medication"
         dose = entity_dose or "—"
-        add_medication(db, member.id, drug, dose)
-        spoken = _bi(lang,
-            bn=f"{member.role_label} এর জন্য {drug} {dose} যোগ করা হয়েছে।",
-            en=f"{drug} {dose} added to {member.role_label}'s medications.")
-        return _confirmed(spoken, lang, member.role_label,
-                          f"Added {drug} {dose} to {member.role_label}.",
-                          household_refresh=True)
+        if nlu.action == "remove":
+            remove_medication(db, member.id, drug)
+            spoken = _bi(lang,
+                bn=f"{member.role_label} এর তালিকা থেকে {drug} মুছে ফেলা হয়েছে।",
+                en=f"Removed {drug} from {member.role_label}'s medications.")
+            return _confirmed(spoken, lang, member.role_label, f"Removed {drug} from {member.role_label}.", household_refresh=True)
+        else:
+            add_medication(db, member.id, drug, dose)
+            spoken = _bi(lang,
+                bn=f"{member.role_label} এর জন্য {drug} {dose} যোগ করা হয়েছে।",
+                en=f"{drug} {dose} added to {member.role_label}'s medications.")
+            return _confirmed(spoken, lang, member.role_label,
+                              f"Added {drug} {dose} to {member.role_label}.",
+                              household_refresh=True)
 
     # ── LOG_SYMPTOM ──────────────────────────────────────────────────────────
     if intent == "LOG_SYMPTOM":
@@ -88,6 +123,22 @@ def run_profile_write(db: Session, household_id: int, nlu: NluResult) -> dict:
 
     # ── UPDATE_MEMBER ────────────────────────────────────────────────────────
     if intent == "UPDATE_MEMBER":
+        if nlu.action == "remove":
+            if entity_type == "condition" and entity_name:
+                remove_condition(db, member.id, entity_name)
+                spoken = _bi(lang, bn=f"{entity_name} মুছে ফেলা হয়েছে।", en=f"Removed condition {entity_name}.")
+            elif entity_type == "allergy" and entity_name:
+                remove_allergy(db, member.id, entity_name)
+                spoken = _bi(lang, bn=f"{entity_name} অ্যালার্জি মুছে ফেলা হয়েছে।", en=f"Removed allergy {entity_name}.")
+            else:
+                spoken = _bi(lang, bn="কী মুছে ফেলব বুঝতে পারিনি।", en="Not sure what to remove.")
+            return _confirmed(spoken, lang, member.role_label, spoken, household_refresh=True)
+            
+        if nlu.action == "rename":
+            rename_member(db, member.id, display_name=entity_value)
+            spoken = _bi(lang, bn="নাম পরিবর্তন করা হয়েছে।", en="Name changed.")
+            return _confirmed(spoken, lang, member.role_label, spoken, household_refresh=True)
+
         cond_lower = (entity_name or "").lower().strip()
         flag_key = _FLAG_MAP.get(cond_lower)
         if flag_key:

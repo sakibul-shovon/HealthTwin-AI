@@ -6,6 +6,7 @@ interface Props {
   members: HouseholdMember[];
   activeMember: string | null;
   onSelect: (label: string) => void;
+  onOpenManager?: (id?: number) => void;
 }
 
 const FLAG_LABELS: Record<string, string> = {
@@ -14,23 +15,29 @@ const FLAG_LABELS: Record<string, string> = {
   pregnant: "Pregnant",
 };
 
-export default function MemberRail({ members, activeMember, onSelect }: Props) {
+export default function MemberRail({ members, activeMember, onSelect, onOpenManager }: Props) {
   return (
     <aside className="flex flex-col gap-3 overflow-y-auto py-4 px-3">
-      <h2 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--ink-faint)" }}>
-        Family
-      </h2>
+      <div className="flex justify-between items-center mb-1">
+        <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--ink-faint)" }}>
+          Family
+        </h2>
+        <button onClick={() => onOpenManager && onOpenManager()} className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
+          + Add
+        </button>
+      </div>
       {members.map((m) => {
         const active = m.role_label === activeMember;
-        const flags = Object.entries(m.flags || {})
-          .filter(([, v]) => v)
-          .map(([k]) => FLAG_LABELS[k] ?? k);
+        const flags: string[] = [];
+        if (m.kidney_impaired) flags.push(FLAG_LABELS.kidney_impaired);
+        if (m.liver_impaired) flags.push(FLAG_LABELS.liver_impaired);
+        if (m.pregnant) flags.push(FLAG_LABELS.pregnant);
 
         return (
           <motion.button
             key={m.id}
             onClick={() => onSelect(m.role_label)}
-            className="w-full text-left rounded-xl p-3 transition-colors"
+            className="w-full text-left rounded-xl p-3 transition-colors relative group"
             style={{
               backgroundColor: active ? "var(--primary-tint)" : "var(--surface)",
               border: `1.5px solid ${active ? "var(--primary)" : "var(--surface-sunk)"}`,
@@ -56,6 +63,13 @@ export default function MemberRail({ members, activeMember, onSelect }: Props) {
                   {m.age}y · {m.sex === "M" ? "Male" : m.sex === "F" ? "Female" : "Unknown"}
                 </p>
               </div>
+              <div className="flex-1"></div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onOpenManager && onOpenManager(m.id); }}
+                className="text-[14px] px-2 text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                ⋯
+              </button>
             </div>
 
             {m.medications.length > 0 && (

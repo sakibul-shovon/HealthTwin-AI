@@ -1,19 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMemberTwin, getMemberTimeline } from "@/lib/api";
-import { MemberTwinData, HealthEvent } from "@/lib/types";
-import { motion } from "framer-motion";
+import { getMemberTwin, getMemberTimeline, generateReport } from "@/lib/api";
+import { MemberTwinData, HealthEvent, ReportData } from "@/lib/types";
+import { motion, AnimatePresence } from "framer-motion";
+import ReportView from "@/components/ReportView";
 
 interface Props {
   memberId: number;
   onBack: () => void;
+  onEdit?: (id: number) => void;
 }
 
-export default function MemberTwin({ memberId, onBack }: Props) {
+const REPORT_TYPES: { type: string; label: string; icon: string }[] = [
+  { type: "family_summary",   label: "Family Summary",    icon: "👨‍👩‍👧" },
+  { type: "medication_report", label: "Medications",       icon: "💊" },
+  { type: "disease_history",  label: "Disease History",   icon: "🩺" },
+  { type: "emergency_summary",label: "Emergency Card",    icon: "🚨" },
+  { type: "doctor_visit",     label: "Doctor Visit",      icon: "📋" },
+  { type: "monthly",          label: "Monthly Report",    icon: "📅" },
+];
+
+export default function MemberTwin({ memberId, onBack, onEdit }: Props) {
   const [twin, setTwin] = useState<MemberTwinData | null>(null);
   const [events, setEvents] = useState<HealthEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeReport, setActiveReport] = useState<ReportData | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -26,6 +39,13 @@ export default function MemberTwin({ memberId, onBack }: Props) {
       setLoading(false);
     });
   }, [memberId]);
+
+  const handleGenerateReport = async (type: string) => {
+    setReportLoading(true);
+    const data = await generateReport(type, memberId);
+    if (data) setActiveReport(data as ReportData);
+    setReportLoading(false);
+  };
 
   if (loading) {
     return (
@@ -68,8 +88,13 @@ export default function MemberTwin({ memberId, onBack }: Props) {
         <button onClick={onBack} className="text-[11px] font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-1 transition-colors px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">
           <span>←</span> Back
         </button>
-        <div className={`px-2 py-1 rounded text-[10px] font-bold border tracking-wider shadow-sm ${bandColors[twin.risk_band]}`}>
-          {twin.risk_band} RISK
+        <div className="flex items-center gap-2">
+          <div className={`px-2 py-1 rounded text-[10px] font-bold border tracking-wider shadow-sm ${bandColors[twin.risk_band]}`}>
+            {twin.risk_band} RISK
+          </div>
+          <button onClick={() => onEdit && onEdit(memberId)} className="text-[14px] px-2 py-0.5 rounded text-gray-500 hover:bg-gray-200 transition-colors bg-gray-100">
+            ⋯
+          </button>
         </div>
       </div>
 
@@ -191,7 +216,45 @@ export default function MemberTwin({ memberId, onBack }: Props) {
             <p className="text-xs text-gray-400 italic px-1">No recent events.</p>
           )}
         </div>
+
+        {/* Reports section */}
+        <div className="pb-6">
+          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2 px-1 flex items-center gap-1">
+            <span>📄</span> Generate Reports
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {REPORT_TYPES.map(({ type, label, icon }) => (
+              <button
+                key={type}
+                onClick={() => handleGenerateReport(type)}
+                disabled={reportLoading}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-indigo-50 hover:border-indigo-200 text-left transition-colors disabled:opacity-50 disabled:cursor-wait shadow-sm"
+              >
+                <span className="text-sm">{icon}</span>
+                <span className="text-[11px] font-semibold text-gray-700 leading-tight">{label}</span>
+              </button>
+            ))}
+          </div>
+          {reportLoading && (
+            <p className="text-[11px] text-indigo-500 text-center mt-2 animate-pulse">Generating report…</p>
+          )}
+        </div>
       </div>
+
+      {/* Report overlay */}
+      <AnimatePresence>
+        {activeReport && (
+          <motion.div
+            className="absolute inset-0 z-20 bg-white flex flex-col"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            <ReportView report={activeReport} onClose={() => setActiveReport(null)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

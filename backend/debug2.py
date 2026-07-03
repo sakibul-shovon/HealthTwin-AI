@@ -1,0 +1,20 @@
+import sys
+print("importing app.api.household")
+import app.api.household
+print("importing app.api.safety_test")
+import app.api.safety_test
+print("importing app.api.voice")
+import app.api.voice
+print("importing app.api.care")
+import app.api.care
+print("importing app.api.chat")
+import app.api.chat
+print("importing app.api.emergency")
+import app.api.emergency
+print("importing app.api.member")
+import app.api.member
+print("importing app.api.upload")
+import app.api.upload
+print("importing app.api.reports")
+import app.api.reports
+print("all api imported")

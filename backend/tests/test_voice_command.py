@@ -5,8 +5,18 @@ All tests use the TestClient; no live Groq key needed (NLU falls back to mock).
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.config import settings
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True, scope="module")
+def force_mock_nlu():
+    """All tests in this file are designed for mock NLU — clear the key for the module."""
+    original_key = settings.GROQ_API_KEY
+    settings.GROQ_API_KEY = ""
+    yield
+    settings.GROQ_API_KEY = original_key
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -39,8 +49,8 @@ def test_flagship_english_unsafe():
 # ── 2. Flagship Bangla: same catch, language=bn ──────────────────────────────
 
 def test_flagship_bangla_unsafe():
+    # Mock NLU maps "ওষুধ" (Bengali "medicine") → ibuprofen for Baba
     res = post_command("বাবার পিঠে ব্যথা, কী ওষুধ দেব?", language="bn")
-    # NLU mock triggers on "ওষুধ" → DRUG_SAFETY_CHECK for Baba/ibuprofen
     assert res["verdict"] == "UNSAFE"
     assert res["language"] == "bn"
     assert res["member_focus"] == "Baba"
@@ -90,7 +100,7 @@ def test_confirm_stale_id_returns_404():
 # ── 5. Gibberish / UNKNOWN → REFUSE ─────────────────────────────────────────
 
 def test_gibberish_returns_refuse():
-    # NLU mock returns UNKNOWN for anything not matching ibuprofen/losartan
+    # Mock NLU routes unrecognised input to UNKNOWN → router refuses
     res = post_command("asdfghjklqwertyuiop")
     assert res["verdict"] == "REFUSE"
 

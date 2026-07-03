@@ -25,6 +25,13 @@ export type VerdictType =
   | 'SAFE' | 'CAUTION' | 'UNSAFE' | 'INFO'
   | 'EMERGENCY' | 'REFUSE' | 'CONFIRMED' | 'CANCELLED' | 'CLARIFY' | null
 
+export interface ReportData {
+  title: string
+  markdown: string
+  report_type: string
+  generated_at: string
+}
+
 export interface ResponseEnvelope {
   verdict: VerdictType
   spoken: string
@@ -38,6 +45,7 @@ export interface ResponseEnvelope {
     members?: string[]  // multi-node pattern alerts
     urgency?: 'Emergency' | 'Urgent' | 'Moderate' | 'Low' | null
     critical?: CriticalInfo
+    report_markdown?: string
   }
   evidence: EvidenceMeta
   actions: ResponseAction[]
@@ -75,6 +83,7 @@ export interface MemberFlags {
 
 export interface HouseholdMember {
   id: number
+  display_name: string
   role_label: string
   age: number
   sex: string
@@ -82,7 +91,9 @@ export interface HouseholdMember {
   conditions: string[]
   medications: MedicationInfo[]
   allergies: AllergyInfo[]
-  flags: MemberFlags
+  kidney_impaired: boolean
+  liver_impaired: boolean
+  pregnant: boolean
   reminders: ReminderInfo[]
 }
 

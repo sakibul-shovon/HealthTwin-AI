@@ -94,6 +94,26 @@ class MemberSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class MemberCreateSchema(BaseModel):
+    display_name: str
+    role_label: str
+    age: int = 0
+    sex: str = "unknown"
+    weight_kg: Optional[float] = None
+    kidney_impaired: bool = False
+    liver_impaired: bool = False
+    pregnant: bool = False
+
+class MemberUpdateSchema(BaseModel):
+    display_name: Optional[str] = None
+    role_label: Optional[str] = None
+    age: Optional[int] = None
+    sex: Optional[str] = None
+    weight_kg: Optional[float] = None
+    kidney_impaired: Optional[bool] = None
+    liver_impaired: Optional[bool] = None
+    pregnant: Optional[bool] = None
+
 # Compact Member Profile Schema used by Safety Spine (CRITICAL SHAPE)
 class MemberProfileSchema(BaseModel):
     role_label: str

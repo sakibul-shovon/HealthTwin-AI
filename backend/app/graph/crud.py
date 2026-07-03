@@ -232,3 +232,124 @@ def set_caregiver(
         )
         db.add(rel)
     db.commit()
+
+def remove_member(db: Session, member_id: int) -> bool:
+    member = db.query(models.Member).filter(models.Member.id == member_id).first()
+    if not member:
+        return False
+    # Relationships
+    db.query(models.Relationship).filter((models.Relationship.from_member_id == member_id) | (models.Relationship.to_member_id == member_id)).delete()
+    # Others cascade or delete manually
+    db.query(models.Medication).filter(models.Medication.member_id == member_id).delete()
+    db.query(models.Condition).filter(models.Condition.member_id == member_id).delete()
+    db.query(models.Allergy).filter(models.Allergy.member_id == member_id).delete()
+    db.query(models.SymptomLog).filter(models.SymptomLog.member_id == member_id).delete()
+    db.query(models.Reminder).filter(models.Reminder.member_id == member_id).delete()
+    db.query(models.HealthEvent).filter(models.HealthEvent.member_id == member_id).delete()
+    db.query(models.DocChunk).filter(models.DocChunk.member_id == member_id).delete()
+    
+    db.delete(member)
+    db.commit()
+    return True
+
+def remove_medication(db: Session, member_id: int, name: str) -> bool:
+    med = db.query(models.Medication).filter(models.Medication.member_id == member_id, models.Medication.name.ilike(name)).first()
+    if not med:
+        return False
+    db.delete(med)
+    db.commit()
+    from app.memory.events import log_event
+    log_event(db, member_id, "medication_removed", {"name": med.name})
+    from .risk import recompute_and_store
+    recompute_and_store(db, member_id)
+    return True
+
+def remove_condition(db: Session, member_id: int, name: str) -> bool:
+    cond = db.query(models.Condition).filter(models.Condition.member_id == member_id, models.Condition.name.ilike(name)).first()
+    if not cond:
+        return False
+    db.delete(cond)
+    db.commit()
+    from .risk import recompute_and_store
+    recompute_and_store(db, member_id)
+    return True
+
+def remove_allergy(db: Session, member_id: int, substance: str) -> bool:
+    allergy = db.query(models.Allergy).filter(models.Allergy.member_id == member_id, models.Allergy.substance.ilike(substance)).first()
+    if not allergy:
+        return False
+    db.delete(allergy)
+    db.commit()
+    return True
+
+def rename_member(db: Session, member_id: int, display_name: Optional[str] = None, role_label: Optional[str] = None) -> Optional[models.Member]:
+    member = db.query(models.Member).filter(models.Member.id == member_id).first()
+    if not member:
+        return None
+    if display_name:
+        member.display_name = display_name
+    if role_label:
+        member.role_label = role_label
+    db.commit()
+    db.refresh(member)
+    return member
+
+def update_relationship(db: Session, from_id: int, to_id: int, rel_type: models.RelationshipType, caregiver: bool) -> models.Relationship:
+    rel = db.query(models.Relationship).filter(models.Relationship.from_member_id == from_id, models.Relationship.to_member_id == to_id).first()
+    if rel:
+        rel.type = rel_type
+        rel.caregiver = caregiver
+    else:
+        rel = models.Relationship(from_member_id=from_id, to_member_id=to_id, type=rel_type, caregiver=caregiver)
+        db.add(rel)
+    db.commit()
+    db.refresh(rel)
+    return rel
+
+def merge_members(db: Session, keep_id: int, remove_id: int) -> Optional[models.Member]:
+    keep_member = db.query(models.Member).filter(models.Member.id == keep_id).first()
+    remove_member_obj = db.query(models.Member).filter(models.Member.id == remove_id).first()
+    
+    if not keep_member or not remove_member_obj:
+        return None
+
+    # Move meds
+    db.query(models.Medication).filter(models.Medication.member_id == remove_id).update({"member_id": keep_id})
+    
+    # Move conditions
+    db.query(models.Condition).filter(models.Condition.member_id == remove_id).update({"member_id": keep_id})
+        
+    # Move allergies
+    db.query(models.Allergy).filter(models.Allergy.member_id == remove_id).update({"member_id": keep_id})
+
+    # Move symptom logs
+    db.query(models.SymptomLog).filter(models.SymptomLog.member_id == remove_id).update({"member_id": keep_id})
+        
+    # Move reminders
+    db.query(models.Reminder).filter(models.Reminder.member_id == remove_id).update({"member_id": keep_id})
+        
+    # Move health events
+    db.query(models.HealthEvent).filter(models.HealthEvent.member_id == remove_id).update({"member_id": keep_id})
+    db.query(models.DocChunk).filter(models.DocChunk.member_id == remove_id).update({"member_id": keep_id})
+
+    # Update relationships (be careful of duplicates)
+    for rel in db.query(models.Relationship).filter(models.Relationship.from_member_id == remove_id).all():
+        if not db.query(models.Relationship).filter(models.Relationship.from_member_id == keep_id, models.Relationship.to_member_id == rel.to_member_id).first():
+            rel.from_member_id = keep_id
+        else:
+            db.delete(rel)
+            
+    for rel in db.query(models.Relationship).filter(models.Relationship.to_member_id == remove_id).all():
+        if not db.query(models.Relationship).filter(models.Relationship.from_member_id == rel.from_member_id, models.Relationship.to_member_id == keep_id).first():
+            rel.to_member_id = keep_id
+        else:
+            db.delete(rel)
+    
+    # Finally delete the duplicate member
+    db.delete(remove_member_obj)
+    db.commit()
+    
+    from .risk import recompute_and_store
+    recompute_and_store(db, keep_id)
+    
+    return keep_member

@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatMessage } from "@/lib/types";
+import ReportView from "@/components/ReportView";
 
 // ── Verdict metadata ──────────────────────────────────────────────────────────
 const VERDICT_META: Record<string, { color: string; bg: string; label: string }> = {
@@ -200,6 +201,19 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
             </div>
           )}
         </div>
+
+        {/* Report card — rendered outside the bubble, below it */}
+        {msg.envelope?.display?.report_markdown && msg.envelope?.display?.title && (
+          <ReportView
+            compact
+            report={{
+              title: msg.envelope.display.title,
+              markdown: msg.envelope.display.report_markdown,
+              report_type: "",
+              generated_at: new Date(msg.timestamp).toISOString(),
+            }}
+          />
+        )}
 
         {/* Timestamp + source */}
         <div className="flex items-center gap-2 pl-1">

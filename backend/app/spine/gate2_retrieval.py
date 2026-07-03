@@ -1,27 +1,31 @@
 import os
 import pickle
-from typing import List
+from typing import List, TYPE_CHECKING
 from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer, CrossEncoder
 from app.graph.database import SessionLocal
 from app.graph.models import KBChunk
 from app.kb.load_corpus import tokenize, BM25_PATH
+
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer, CrossEncoder
 
 _embedding_model = None
 _rerank_model = None
 _bm25_data = None
 
 
-def get_embedding_model() -> SentenceTransformer:
+def get_embedding_model():
     global _embedding_model
     if _embedding_model is None:
+        from sentence_transformers import SentenceTransformer  # lazy — avoids MemoryError on startup
         _embedding_model = SentenceTransformer("BAAI/bge-base-en-v1.5")
     return _embedding_model
 
 
-def get_rerank_model() -> CrossEncoder:
+def get_rerank_model():
     global _rerank_model
     if _rerank_model is None:
+        from sentence_transformers import CrossEncoder  # lazy
         _rerank_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
     return _rerank_model
 
@@ -72,8 +76,9 @@ def _bm25_only_retrieve(query: str, k: int, db) -> RetrievalResult:
     chunks.sort(key=lambda c: score_map.get(c.id, 0), reverse=True)
 
     top_score = score_map.get(chunks[0].id, 0.0) if chunks else 0.0
-    # BM25 scores vary; treat > 1.0 as sufficient for this small corpus
-    sufficient = top_score > 1.0
+    # BM25 scores in this small corpus: in-domain medical queries score > 3;
+    # out-of-domain / gibberish queries score < 3 even if stopwords partially match.
+    sufficient = top_score > 3.0
 
     retrieved_chunks = [
         RetrievedChunk(text=c.text, source=c.source, url=c.url, score=score_map.get(c.id, 0.0))
@@ -151,20 +156,17 @@ def retrieve(query: str, k: int = 6) -> RetrievalResult:
                 zip(top_candidates, cross_scores), key=lambda x: x[1], reverse=True
             )[:k]
             top_score = float(scored_candidates[0][1]) if scored_candidates else 0.0
-            sufficient = top_score > 0.0
+            # ms-marco cross-encoder: out-of-domain queries score 1-2, in-domain score 3+.
+            # Threshold 3.0 separates irrelevant from relevant matches.
+            sufficient = top_score > 3.0
             retrieved_chunks = [
                 RetrievedChunk(text=c.text, source=c.source, url=c.url, score=float(score))
                 for c, score in scored_candidates
             ]
         except Exception:
-            # Reranker OOM — use RRF scores directly
-            scored_candidates = top_candidates[:k]
-            top_score = rrf_scores.get(scored_candidates[0].id, 0.0) if scored_candidates else 0.0
-            sufficient = top_score > 0.005
-            retrieved_chunks = [
-                RetrievedChunk(text=c.text, source=c.source, url=c.url, score=rrf_scores.get(c.id, 0.0))
-                for c in scored_candidates
-            ]
+            # Reranker OOM — RRF scores have no meaningful relevance baseline,
+            # so fall back to BM25 which has a calibrated threshold.
+            return _bm25_only_retrieve(query, k, db)
 
         return RetrievalResult(chunks=retrieved_chunks, sufficient=sufficient, top_score=top_score)
     finally:

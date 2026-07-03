@@ -7,8 +7,8 @@ interface Props {
   members: HouseholdMember[];
   focusedMember: string | null;
   activeMember: string | null;
-  alertMembers?: string[];  // multi-node pattern alert (amber edge glow)
-  verdict?: string | null;  // last response verdict — drives emergency red + dimming
+  alertMembers?: string[];
+  verdict?: string | null;
   onSelect: (label: string) => void;
 }
 
@@ -20,23 +20,30 @@ function nodePosition(index: number, total: number, radius: number) {
   };
 }
 
-const INITIALS: Record<string, string> = {
-  Baba: "B",
-  Ma: "M",
-  Self: "S",
-  Child: "C",
-};
+const INITIALS: Record<string, string> = { Baba: "B", Ma: "M", Self: "S", Child: "C" };
 
-export default function Constellation({ members, focusedMember, activeMember, alertMembers = [], verdict, onSelect }: Props) {
+export default function Constellation({
+  members,
+  focusedMember,
+  activeMember,
+  alertMembers = [],
+  verdict,
+  onSelect,
+}: Props) {
   const RADIUS = 140;
   const SIZE = RADIUS * 2 + 80;
+  const cx = SIZE / 2;
+  const cy = SIZE / 2;
+
   const isEmergency = verdict === "EMERGENCY";
-  const isDimming = (verdict === "UNSAFE" || verdict === "CAUTION" || verdict === "EMERGENCY") && focusedMember !== null;
+  const isDimming =
+    (verdict === "UNSAFE" || verdict === "CAUTION" || verdict === "EMERGENCY") &&
+    focusedMember !== null;
   const focusColor = isEmergency ? "var(--urgent)" : "var(--accent)";
   const focusDeep = isEmergency ? "var(--urgent)" : "var(--accent-deep)";
   const focusGlow = isEmergency ? "rgba(239,68,68,0.25)" : "var(--accent-glow)";
 
-  // Track changes to focusedMember to trigger a burst ripple
+  // Burst ripple + travel dot key — incremented each time focus moves to a new member
   const [burstKey, setBurstKey] = useState(0);
   const prevFocused = useRef<string | null>(null);
   useEffect(() => {
@@ -46,22 +53,33 @@ export default function Constellation({ members, focusedMember, activeMember, al
     prevFocused.current = focusedMember;
   }, [focusedMember]);
 
+  // Pre-compute positions for the travel dot SVG animation
+  const focusedPos = focusedMember
+    ? nodePosition(
+        members.findIndex((m) => m.role_label === focusedMember),
+        members.length,
+        RADIUS,
+      )
+    : null;
+
   return (
     <div
+      role="group"
+      aria-label="Family constellation — select a member to view their twin"
       className="relative flex items-center justify-center"
       style={{ width: SIZE, height: SIZE }}
     >
-      {/* Connector lines */}
+      {/* SVG layer: connector lines + travel dot */}
       <svg
         className="absolute inset-0 pointer-events-none"
         width={SIZE}
         height={SIZE}
         style={{ zIndex: 0 }}
+        aria-hidden="true"
       >
+        {/* Lines from center → each node */}
         {members.map((m, i) => {
           const pos = nodePosition(i, members.length, RADIUS);
-          const cx = SIZE / 2;
-          const cy = SIZE / 2;
           const focused = m.role_label === focusedMember;
           const alerted = alertMembers.includes(m.role_label);
           return (
@@ -71,13 +89,38 @@ export default function Constellation({ members, focusedMember, activeMember, al
               y1={cy}
               x2={cx + pos.x}
               y2={cy + pos.y}
-              stroke={alerted ? "var(--watch)" : focused ? "var(--accent)" : "var(--ink-faint)"}
-              strokeWidth={alerted ? 2 : focused ? 1.5 : 1}
-              strokeDasharray={alerted ? "6 3" : focused ? "none" : "4 4"}
-              opacity={alerted ? 0.9 : focused ? 0.8 : 0.4}
+              stroke={
+                alerted
+                  ? "var(--watch)"
+                  : focused
+                  ? focusColor
+                  : "var(--ink-faint)"
+              }
+              strokeWidth={alerted ? 2 : focused ? 2 : 1}
+              strokeDasharray={alerted ? "5 3" : focused ? "none" : "4 4"}
+              opacity={alerted ? 0.9 : focused ? 0.85 : 0.35}
             />
           );
         })}
+
+        {/* Travel dot: shoots from center to focused node on each new focus */}
+        <AnimatePresence>
+          {focusedPos && (
+            <motion.circle
+              key={`travel-${burstKey}`}
+              r={5}
+              fill={focusColor}
+              initial={{ cx, cy, opacity: 1, scale: 1 }}
+              animate={{ cx: cx + focusedPos.x, cy: cy + focusedPos.y, opacity: 0, scale: 0.4 }}
+              exit={{}}
+              transition={{ duration: 0.55, ease: "easeOut" }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Center hub */}
+        <circle cx={cx} cy={cy} r={10} fill="var(--primary)" opacity={0.18} />
+        <circle cx={cx} cy={cy} r={6} fill="var(--primary)" opacity={0.55} />
       </svg>
 
       {/* Member nodes */}
@@ -88,10 +131,21 @@ export default function Constellation({ members, focusedMember, activeMember, al
         const alerted = alertMembers.includes(m.role_label);
         const dimmed = isDimming && !focused && !alerted;
 
+        const handleKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect(m.role_label);
+          }
+        };
+
         return (
           <motion.div
             key={m.id}
-            className="absolute flex flex-col items-center gap-1 cursor-pointer z-10"
+            role="button"
+            tabIndex={0}
+            aria-label={`${m.role_label} — ${m.age} years, ${m.sex}${alerted ? " — pattern alert" : ""}${focused ? " — currently focused" : ""}`}
+            aria-pressed={active}
+            className="absolute flex flex-col items-center gap-1 cursor-pointer z-10 outline-none"
             style={{
               left: SIZE / 2 + pos.x - 30,
               top: SIZE / 2 + pos.y - 30,
@@ -99,8 +153,9 @@ export default function Constellation({ members, focusedMember, activeMember, al
             animate={{ opacity: dimmed ? 0.3 : 1 }}
             transition={{ duration: 0.4 }}
             onClick={() => onSelect(m.role_label)}
+            onKeyDown={handleKeyDown}
           >
-            {/* One-shot burst ripple when this node becomes focused */}
+            {/* Burst ripple when this node becomes focused */}
             <AnimatePresence>
               {focused && (
                 <>
@@ -109,53 +164,44 @@ export default function Constellation({ members, focusedMember, activeMember, al
                       key={`burst-${burstKey}-${ring}`}
                       className="absolute rounded-full pointer-events-none"
                       style={{
-                        width: 56,
-                        height: 56,
+                        width: 56, height: 56,
                         border: `2px solid ${focusColor}`,
-                        left: 0,
-                        top: 0,
+                        left: 0, top: 0,
                       }}
                       initial={{ scale: 1, opacity: 0.8 }}
                       animate={{ scale: 3.2, opacity: 0 }}
                       exit={{}}
-                      transition={{
-                        duration: 1.0,
-                        delay: ring * 0.25,
-                        ease: "easeOut",
-                      }}
+                      transition={{ duration: 1.0, delay: ring * 0.25, ease: "easeOut" }}
                     />
                   ))}
                 </>
               )}
             </AnimatePresence>
 
-            {/* Continuous soft glow — focused (amber) or alerted (watch/amber) */}
+            {/* Soft glow behind focused or alerted node */}
             {(focused || alerted) && (
               <motion.div
-                className="absolute rounded-full"
+                className="absolute rounded-full pointer-events-none"
                 style={{
-                  width: 60,
-                  height: 60,
+                  width: 64, height: 64,
                   background: alerted && !focused ? "var(--watch-bg)" : focusGlow,
-                  filter: "blur(12px)",
+                  filter: "blur(14px)",
                 }}
-                animate={{ opacity: alerted ? [0.5, 1.0, 0.5] : [0.4, 0.8, 0.4] }}
+                animate={{ opacity: alerted ? [0.5, 1.0, 0.5] : [0.4, 0.85, 0.4] }}
                 transition={{ duration: alerted ? 1.0 : 1.6, repeat: Infinity }}
               />
             )}
 
-            {/* Alert ring — pulsing dashed border for pattern-involved nodes */}
+            {/* Alert pulsing ring */}
             {alerted && !focused && (
               <motion.div
                 className="absolute rounded-full pointer-events-none"
                 style={{
-                  width: 62,
-                  height: 62,
+                  width: 62, height: 62,
                   border: "2px dashed var(--watch)",
-                  left: -1,
-                  top: -1,
+                  left: -1, top: -1,
                 }}
-                animate={{ opacity: [0.6, 1, 0.6], scale: [1, 1.06, 1] }}
+                animate={{ opacity: [0.6, 1, 0.6], scale: [1, 1.07, 1] }}
                 transition={{ duration: 1.0, repeat: Infinity }}
               />
             )}
@@ -182,18 +228,24 @@ export default function Constellation({ members, focusedMember, activeMember, al
                     : "var(--ink-faint)"
                 }`,
               }}
-              animate={focused
-                ? isEmergency
-                  ? { scale: [1, 1.12, 1], boxShadow: ["0 0 0px #ef4444", "0 0 20px #ef4444", "0 0 0px #ef4444"] }
-                  : { scale: [1, 1.08, 1] }
-                : { scale: 1 }}
+              animate={
+                focused
+                  ? isEmergency
+                    ? {
+                        scale: [1, 1.12, 1],
+                        boxShadow: ["0 0 0px #ef4444", "0 0 24px #ef4444", "0 0 0px #ef4444"],
+                      }
+                    : { scale: [1, 1.08, 1] }
+                  : { scale: 1 }
+              }
               transition={focused ? { duration: 1.2, repeat: Infinity } : {}}
-              whileHover={{ scale: 1.1 }}
+              whileHover={{ scale: 1.12 }}
+              whileFocus={{ scale: 1.12 }}
             >
               {INITIALS[m.role_label] ?? m.role_label?.[0]?.toUpperCase() ?? "?"}
             </motion.div>
 
-            {/* Name + age */}
+            {/* Name + age label */}
             <div className="flex flex-col items-center" style={{ minWidth: 60 }}>
               <span
                 className="text-xs font-semibold leading-tight"

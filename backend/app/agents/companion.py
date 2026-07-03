@@ -36,6 +36,7 @@ _CLINICAL_KEYWORDS = {
     "interaction", "side effect", "overdose", "contraindication", "prescription",
     "mg", "mcg", "ml", "warfarin", "ibuprofen", "aspirin", "metformin",
     "paracetamol", "amlodipine", "penicillin", "antibiotic", "tablet",
+    "lab", "report", "test", "result", "value"
 }
 
 

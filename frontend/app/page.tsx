@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { getHousehold, post, postVoiceConfirm, postCareNotify, getChatHistory, clearChatHistory } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
 import { ResponseEnvelope } from "@/lib/types";
@@ -13,6 +13,8 @@ import MemberTwin from "@/components/MemberTwin";
 import VerdictCard from "@/components/VerdictCard";
 import VoicePanel from "@/components/VoicePanel";
 import ChatPanel from "@/components/ChatPanel";
+import UploadDropzone, { UploadDropzoneRef } from "@/components/UploadDropzone";
+import FamilyManager from "@/components/FamilyManager";
 
 export default function Home() {
   const {
@@ -37,9 +39,18 @@ export default function Home() {
     setEmergency,
   } = useTwinStore();
 
-  // D2: permanent 3-column layout — no view toggle needed
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropzoneRef = useRef<UploadDropzoneRef>(null);
   const isProcessing = orbState === "thinking" || orbState === "speaking";
+  
+  const [isManagerOpen, setManagerOpen] = useState(false);
+  const [managerMemberId, setManagerMemberId] = useState<number | null>(null);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+
+  const handleOpenManager = (id?: number) => {
+    setManagerMemberId(id || null);
+    setManagerOpen(true);
+  };
 
   // ── Load household & chat history on mount ────────────────────────────────
   useEffect(() => {
@@ -245,13 +256,105 @@ export default function Home() {
   const focusedMember = lastResponse?.member_focus ?? null;
   const alertMembers = lastResponse?.display.members ?? [];
 
+  const handleUploadSuccess = async (summary: string) => {
+    // Refresh household so twins show new meds/conditions
+    const fresh = await getHousehold();
+    if (fresh) setHousehold(fresh);
+    
+    // Add success message
+    addMessage({
+      id: `system-${Date.now()}`,
+      role: "assistant",
+      text: summary,
+      timestamp: Date.now(),
+      envelope: {
+        verdict: "CONFIRMED",
+        spoken: summary,
+        display: {
+          title: "Document Saved",
+          detail: summary,
+          conflict: null,
+          alternative: null,
+          member: activeMemberId ? members.find(m => m.id === activeMemberId)?.role_label ?? null : null,
+          interpreted: "document upload",
+        },
+        evidence: { source: "System", confidence: "HIGH", grounding_score: null },
+        actions: [],
+        member_focus: null,
+        language: "en"
+      }
+    });
+  };
+
   return (
     <div
       className="flex flex-col h-screen overflow-hidden"
       style={{ backgroundColor: "var(--canvas)" }}
     >
+      <FamilyManager 
+        isOpen={isManagerOpen} 
+        onClose={() => setManagerOpen(false)} 
+        initialMemberId={managerMemberId} 
+      />
       {/* Emergency Mode Overlay */}
       <EmergencyMode onAction={handleAction} />
+
+      {/* ── Mobile Twin Panel (bottom sheet, lg:hidden) ──────────────────── */}
+      {mobilePanelOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end"
+          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+          onClick={() => setMobilePanelOpen(false)}
+        >
+          <div
+            className="rounded-t-2xl overflow-hidden flex flex-col"
+            style={{ backgroundColor: "var(--surface)", maxHeight: "80vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 shrink-0"
+              style={{ borderBottom: "1px solid var(--surface-sunk)" }}>
+              <p className="text-sm font-bold" style={{ color: "var(--ink)" }}>
+                {activeMemberId ? "Member Twin" : "Family Constellation"}
+              </p>
+              <button
+                onClick={() => setMobilePanelOpen(false)}
+                className="text-xs px-2 py-1 rounded-lg"
+                style={{ backgroundColor: "var(--surface-sunk)", color: "var(--ink-soft)" }}
+                aria-label="Close panel"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {activeMemberId ? (
+                <MemberTwin
+                  memberId={activeMemberId}
+                  onBack={() => { setActiveMember(null); }}
+                  onEdit={handleOpenManager}
+                />
+              ) : (
+                <div className="flex flex-col items-center p-4">
+                  {members.length > 0 && (
+                    <Constellation
+                      members={members}
+                      focusedMember={focusedMember}
+                      activeMember={activeMember}
+                      alertMembers={alertMembers}
+                      verdict={lastResponse?.verdict ?? null}
+                      onSelect={(label) => { setActiveMember(label); }}
+                    />
+                  )}
+                  {lastResponse && (
+                    <div className="w-full px-2 pb-4">
+                      <VerdictCard response={lastResponse as ResponseEnvelope | null} onAction={handleAction} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header
         className="flex items-center justify-between px-5 py-3 shrink-0 z-20"
@@ -299,12 +402,23 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right: clear */}
+        {/* Right: mobile twin toggle + clear */}
         <div className="flex items-center gap-2">
+          {/* Show constellation/twin panel on mobile */}
+          <button
+            onClick={() => setMobilePanelOpen(v => !v)}
+            className="lg:hidden text-[10px] px-2.5 py-1 rounded-full transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "var(--accent)", color: "white" }}
+            aria-label="Toggle family twin panel"
+            aria-expanded={mobilePanelOpen}
+          >
+            {mobilePanelOpen ? "✕ Close" : "🏠 Twin"}
+          </button>
           {messages.length > 0 && (
             <button onClick={() => { clearChatHistory(); clearMessages(); }}
               className="text-[10px] px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
-              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}>
+              style={{ backgroundColor: "var(--primary-deep)", color: "var(--primary-tint)" }}
+              aria-label="Clear chat history">
               Clear
             </button>
           )}
@@ -336,7 +450,7 @@ export default function Home() {
         <div className="hidden md:flex md:flex-col w-56 shrink-0 overflow-y-auto"
           style={{ borderRight: "1px solid var(--surface-sunk)" }}>
           {members.length > 0 ? (
-            <MemberRail members={members} activeMember={activeMember} onSelect={setActiveMember} />
+            <MemberRail members={members} activeMember={activeMember} onSelect={setActiveMember} onOpenManager={handleOpenManager} />
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-xs" style={{ color: "var(--ink-faint)" }}>Loading family…</p>
@@ -344,57 +458,57 @@ export default function Home() {
           )}
         </div>
 
-        {/* Center: Orb bar + Chat + Voice input */}
+        {/* Center: Chat + Orb + Voice input */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
-          {/* Compact orb status bar */}
-          <div className="flex items-center justify-between px-5 py-2 shrink-0"
-            style={{ borderBottom: "1px solid var(--surface-sunk)" }}>
-            <div className="flex items-center gap-3">
-              <div className="scale-[0.55] origin-left">
-                <VoiceOrb onClick={handleOrbClick} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold" style={{ color: "var(--ink)" }}>
+          <UploadDropzone ref={dropzoneRef} onUploadSuccess={handleUploadSuccess}>
+            {/* Chat history */}
+            <div className="flex-1 overflow-hidden">
+              <ChatPanel
+                messages={messages}
+                isThinking={orbState === "thinking"}
+                onExampleClick={(t) => handleCommand(t, "en")}
+              />
+            </div>
+          </UploadDropzone>
+
+          {/* ── Orb + status + voice input ────────────────────────────────── */}
+          <div className="shrink-0 flex flex-col items-center gap-2 px-4 pb-4 pt-3"
+            style={{ borderTop: "1px solid var(--surface-sunk)" }}>
+
+            {/* Orb row: orb (md) + status text side-by-side */}
+            <div className="flex items-center gap-4 w-full">
+              <VoiceOrb size="md" onClick={handleOrbClick} />
+              <div className="flex flex-col min-w-0 flex-1">
+                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }} aria-live="polite">
                   {orbState === "listening" && "Listening…"}
-                  {orbState === "thinking" && "Processing…"}
+                  {orbState === "thinking" && "Processing your request…"}
                   {orbState === "speaking" && "Speaking…"}
-                  {orbState === "error" && "Error — try again"}
-                  {orbState === "idle" && (isListening ? "Listening…" : "Ready")}
+                  {orbState === "error"    && "Didn't catch that — please try again"}
+                  {orbState === "idle"     && (isListening ? "Listening…" : "Ready to listen")}
                 </p>
                 {transcript && (
-                  <p className="text-[10px] italic truncate max-w-[200px]"
+                  <p className="text-[11px] italic truncate"
                     style={{ color: "var(--ink-faint)" }}>
                     &ldquo;{transcript}&rdquo;
                   </p>
                 )}
+                {focusedMember && (
+                  <span className="text-[10px] mt-0.5 inline-flex items-center gap-1 font-medium w-fit px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: "var(--accent-glow)", color: "var(--accent-deep)" }}>
+                    Focus: {focusedMember}
+                  </span>
+                )}
               </div>
             </div>
-            {focusedMember && (
-              <span className="text-[10px] px-2.5 py-1 rounded-full font-medium"
-                style={{ backgroundColor: "var(--accent-glow)", color: "var(--accent-deep)" }}>
-                Focus: {focusedMember}
-              </span>
-            )}
-          </div>
 
-          {/* Chat history */}
-          <div className="flex-1 overflow-hidden">
-            <ChatPanel
-              messages={messages}
-              isThinking={orbState === "thinking"}
-              onExampleClick={(t) => handleCommand(t, "en")}
-            />
-          </div>
-
-          {/* Voice input */}
-          <div className="shrink-0 px-4 pb-4 pt-3"
-            style={{ borderTop: "1px solid var(--surface-sunk)" }}>
+            {/* Voice panel (text input + chips) */}
             <VoicePanel
               onSubmit={handleCommand}
               isListening={isListening}
               isSTTSupported={isSTTSupported}
               onMicClick={handleMicClick}
+              onAttachClick={() => dropzoneRef.current?.openFileDialog()}
               disabled={isProcessing}
             />
           </div>
@@ -405,7 +519,7 @@ export default function Home() {
           style={{ borderLeft: "1px solid var(--surface-sunk)" }}>
           
           {activeMemberId ? (
-            <MemberTwin memberId={activeMemberId} onBack={() => setActiveMember(null)} />
+            <MemberTwin memberId={activeMemberId} onBack={() => setActiveMember(null)} onEdit={handleOpenManager} />
           ) : (
             <div className="flex flex-col h-full overflow-y-auto">
               {/* Constellation */}

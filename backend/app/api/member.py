@@ -1,13 +1,85 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.graph.database import get_db
 from app.graph.models import Member, Relationship, HealthEvent
-from app.graph.schemas import MemberTwinSchema, HealthEventSchema
+from app.graph.schemas import MemberTwinSchema, HealthEventSchema, MemberSchema, MemberCreateSchema, MemberUpdateSchema
 from app.graph.risk import compute_risk
+from app.graph.crud import add_member, remove_member, merge_members, add_medication, remove_medication, add_condition, remove_condition, add_allergy, remove_allergy
 from app.memory.events import get_timeline
 from typing import List
 
+class ItemPayload(BaseModel):
+    name: str
+    dose: str = ""
+    reaction: str = ""
+
 router = APIRouter(prefix="/member", tags=["member"])
+
+@router.post("", response_model=MemberSchema)
+def create_member(data: MemberCreateSchema, household_id: int = 1, db: Session = Depends(get_db)):
+    m = add_member(db, household_id, data.model_dump())
+    return m
+
+@router.patch("/{member_id}", response_model=MemberSchema)
+def update_member(member_id: int, data: MemberUpdateSchema, db: Session = Depends(get_db)):
+    m = db.query(Member).filter(Member.id == member_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(m, key, value)
+        
+    db.commit()
+    db.refresh(m)
+    
+    from app.graph.risk import recompute_and_store
+    recompute_and_store(db, member_id)
+    return m
+
+@router.delete("/{member_id}")
+def delete_member(member_id: int, db: Session = Depends(get_db)):
+    if not remove_member(db, member_id):
+        raise HTTPException(status_code=404, detail="Member not found")
+    return {"status": "success"}
+
+@router.post("/{keep_id}/merge")
+def merge_member(keep_id: int, remove_id: int = Body(..., embed=True), db: Session = Depends(get_db)):
+    m = merge_members(db, keep_id, remove_id)
+    if not m:
+        raise HTTPException(status_code=400, detail="Merge failed (invalid IDs)")
+    return {"status": "success"}
+
+@router.post("/{member_id}/medication")
+def add_member_medication(member_id: int, payload: ItemPayload, db: Session = Depends(get_db)):
+    add_medication(db, member_id, payload.name, payload.dose)
+    return {"status": "success"}
+
+@router.delete("/{member_id}/medication/{name}")
+def delete_member_medication(member_id: int, name: str, db: Session = Depends(get_db)):
+    remove_medication(db, member_id, name)
+    return {"status": "success"}
+
+@router.post("/{member_id}/condition")
+def add_member_condition(member_id: int, payload: ItemPayload, db: Session = Depends(get_db)):
+    add_condition(db, member_id, payload.name)
+    return {"status": "success"}
+
+@router.delete("/{member_id}/condition/{name}")
+def delete_member_condition(member_id: int, name: str, db: Session = Depends(get_db)):
+    remove_condition(db, member_id, name)
+    return {"status": "success"}
+
+@router.post("/{member_id}/allergy")
+def add_member_allergy(member_id: int, payload: ItemPayload, db: Session = Depends(get_db)):
+    add_allergy(db, member_id, payload.name, payload.reaction)
+    return {"status": "success"}
+
+@router.delete("/{member_id}/allergy/{name}")
+def delete_member_allergy(member_id: int, name: str, db: Session = Depends(get_db)):
+    remove_allergy(db, member_id, name)
+    return {"status": "success"}
 
 @router.get("/{member_id}/twin", response_model=MemberTwinSchema)
 def get_member_twin(member_id: int, db: Session = Depends(get_db)):

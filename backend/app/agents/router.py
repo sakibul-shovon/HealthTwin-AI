@@ -85,6 +85,8 @@ def _interpreted_text(nlu: NluResult) -> str:
         return "answer health question"
     if nlu.intent in ("SET_REMINDER", "ASSIGN_CAREGIVER"):
         return f"{nlu.intent.replace('_', ' ').lower()} for {m}"
+    if nlu.intent == "GENERATE_REPORT":
+        return f"generate report for {m}" if m != "member" else "generate family report"
     return nlu.intent.replace("_", " ").lower()
 
 
@@ -184,7 +186,11 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
     # Runs before any intent dispatch — catches red flags regardless of intent.
     red_flag = scan_red_flags(nlu.raw_transcript or "")
     if red_flag:
-        return build_emergency_envelope(db, household_id, red_flag, nlu.member, language)
+        member_ref = nlu.member
+        if not member_ref:
+            extracted = _extract_members_from_text(nlu.raw_transcript or "")
+            member_ref = extracted[0] if extracted else None
+        return build_emergency_envelope(db, household_id, red_flag, member_ref, language)
 
     secondary = _secondary_intent(nlu.raw_transcript or "", intent)
 
@@ -341,6 +347,78 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
             "language": language,
         }
 
+    # ── LIVE: Report Agent ───────────────────────────────────────────────────
+    if intent == "GENERATE_REPORT":
+        from app.agents.report import generate_report, REPORT_TYPES
+
+        raw_text = (nlu.raw_transcript or "").lower()
+        _TYPE_KEYWORDS = {
+            "medication": "medication_report",
+            "medicine": "medication_report",
+            "disease": "disease_history",
+            "condition": "disease_history",
+            "emergency": "emergency_summary",
+            "doctor": "doctor_visit",
+            "visit": "doctor_visit",
+            "monthly": "monthly",
+            "month": "monthly",
+            "family": "family_summary",
+            "রিপোর্ট": "family_summary",
+            "ওষুধ": "medication_report",
+            "রোগ": "disease_history",
+            "জরুরি": "emergency_summary",
+            "মাসিক": "monthly",
+        }
+        report_type = "family_summary"
+        for kw, rt in _TYPE_KEYWORDS.items():
+            if kw in raw_text:
+                report_type = rt
+                break
+
+        target_member_id = None
+        if nlu.member:
+            target_m = (
+                db.query(Member)
+                .filter(Member.household_id == household_id, Member.role_label.ilike(nlu.member))
+                .first()
+            )
+            if target_m:
+                target_member_id = target_m.id
+
+        result = generate_report(db, household_id, report_type, target_member_id, language)
+        title = result["title"]
+        markdown = result["markdown"]
+
+        spoken = (
+            f"রিপোর্ট তৈরি হয়েছে: {title}"
+            if language == "bn"
+            else f"Report ready: {title}"
+        )
+        preview = markdown[:300] + "…" if len(markdown) > 300 else markdown
+
+        return {
+            "verdict": "INFO",
+            "spoken": spoken,
+            "display": {
+                "title": title,
+                "conflict": None,
+                "alternative": None,
+                "detail": preview,
+                "member": nlu.member,
+                "interpreted": _interpreted_text(nlu),
+                "report_markdown": markdown,
+            },
+            "evidence": {
+                "source": "HealthTwin graph data",
+                "confidence": "HIGH",
+                "grounding_score": 1.0,
+            },
+            "actions": [{"type": "download_report", "label": "⬇ Download .md", "target": title}],
+            "member_focus": nlu.member,
+            "language": language,
+            "report": result,
+        }
+
     # ── UNKNOWN fallback: Companion with member context → friendly intro ─────
     question = nlu.raw_transcript or ""
 
@@ -359,32 +437,10 @@ def route(db: Session, household_id: int, nlu: NluResult, language: str, is_foll
             result.setdefault("display", {})["interpreted"] = question
             return result
 
-    # Truly unknown — return a helpful intro instead of a cryptic error
-    if language == "bn":
-        spoken = (
-            "আমি HealthTwin — আপনার পারিবারিক স্বাস্থ্য সহকারী। "
-            "আমাকে জিজ্ঞেস করুন: ওষুধ নিরাপদ কিনা, উপসর্গ কেমন, "
-            "বা পরিবারের কোনো সদস্যের জন্য কী করা উচিত।"
-        )
-    else:
-        spoken = (
-            "I'm HealthTwin, your family health assistant. "
-            "Try asking: 'Is ibuprofen safe for Baba?', "
-            "'Check for household patterns', or 'Who is Baba's caregiver?'"
-        )
-    return {
-        "verdict": "INFO",
-        "spoken": spoken,
-        "display": {
-            "title": "HealthTwin Assistant",
-            "conflict": None,
-            "alternative": None,
-            "detail": spoken,
-            "member": None,
-            "interpreted": nlu.raw_transcript or "",
-        },
-        "evidence": {"source": None, "confidence": None, "grounding_score": None},
-        "actions": [],
-        "member_focus": None,
-        "language": language,
-    }
+    # Truly unknown / unrecognisable — refuse rather than guess
+    spoken = (
+        "আমি এটি বুঝতে পারিনি। ওষুধ, উপসর্গ, বা পারিবারিক স্বাস্থ্য বিষয়ে জিজ্ঞেস করুন।"
+        if language == "bn" else
+        "I couldn't understand that request. Try asking about a medication, symptom, or family member's health."
+    )
+    return _refuse(spoken, language, nlu)

@@ -90,13 +90,18 @@ def test_companion_out_of_scope_returns_refuse():
 def test_companion_refuse_has_no_evidence():
     """A REFUSE response should have null evidence fields."""
     from app.agents.companion import run_companion
+    from app.config import settings
 
+    # Clear GROQ key so grounded_explain uses retrieval score only (no LLM fabrication)
+    original_key = settings.GROQ_API_KEY
+    settings.GROQ_API_KEY = ""
     db: Session = SessionLocal()
     try:
         hh_id = _get_household_id()
         result = run_companion(db, hh_id, "xyzzy quantum cure klothozen remedy", "en")
     finally:
         db.close()
+        settings.GROQ_API_KEY = original_key
 
     # Nonsense query will definitely miss the corpus
     assert result["verdict"] == "REFUSE"
@@ -171,8 +176,14 @@ def test_companion_no_confirm_needed():
 
 # ── HTTP route tests ──────────────────────────────────────────────────────────
 
+def _clear_chat():
+    """Wipe server-side chat history so E04 context injection doesn't bleed across tests."""
+    client.delete("/api/chat/history")
+
+
 def test_companion_via_http_paracetamol_empty_stomach():
     """End-to-end: text 'is it safe to take paracetamol on empty stomach' → INFO or REFUSE."""
+    _clear_chat()
     data = _do_command("is it safe to take paracetamol on an empty stomach")
     assert data["verdict"] in ("INFO", "REFUSE")
     assert data["spoken"]
@@ -181,6 +192,7 @@ def test_companion_via_http_paracetamol_empty_stomach():
 
 def test_companion_via_http_out_of_scope_refuses():
     """End-to-end: out-of-scope gibberish → REFUSE from companion."""
+    _clear_chat()
     data = _do_command("what herb cures all diseases instantly forever")
     # Router may return UNKNOWN (unrecognised by NLU mock) or companion REFUSE
     assert data["verdict"] in ("REFUSE", None, "INFO")
@@ -189,6 +201,7 @@ def test_companion_via_http_out_of_scope_refuses():
 
 def test_companion_via_http_dengue():
     """End-to-end: dengue warning signs question → INFO or REFUSE with evidence."""
+    _clear_chat()
     data = _do_command("what are the warning signs of dengue fever")
     assert data["verdict"] in ("INFO", "REFUSE")
     if data["verdict"] == "INFO":

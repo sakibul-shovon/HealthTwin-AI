@@ -58,16 +58,12 @@ def compose(envelope: dict, interpreted: str | None = None) -> dict:
             )
 
     # ── INFO guard ───────────────────────────────────────────────────────────
+    # INFO does NOT require evidence — companion/pattern agents legitimately emit
+    # INFO without a clinical source. Only add a disclaimer for unverified LLM answers.
     if verdict == "INFO":
         ev = envelope.get("evidence") or {}
         source = ev.get("source") or ""
-        if not source:
-            envelope["verdict"] = "REFUSE"
-            envelope["spoken"] = (
-                "I cannot verify this. Please consult a doctor." if language == "en"
-                else "আমি এটি যাচাই করতে পারছি না। দয়া করে ডাক্তারের পরামর্শ নিন।"
-            )
-        elif "unverified" in source.lower():
+        if "unverified" in source.lower():
             ev["confidence"] = "LOW"
             envelope["evidence"] = ev
             disclaimer = _UNVERIFIED_DISCLAIMER_BN if language == "bn" else _UNVERIFIED_DISCLAIMER_EN
