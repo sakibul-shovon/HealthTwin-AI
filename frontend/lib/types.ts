@@ -83,6 +83,18 @@ export interface ResponseEnvelope {
   }
 }
 
+export type RiskBand = 'LOW' | 'MED' | 'HIGH'
+
+export interface InsightItem {
+  id: string
+  severity: 'HIGH' | 'MED' | 'LOW'
+  category: 'interaction' | 'contraindication' | 'allergy' | 'dose' | 'flag' | 'poly'
+  title: string
+  detail: string
+  member: string
+  action_query: string
+}
+
 export interface MedicationInfo {
   name: string
   dose: string

@@ -1,7 +1,13 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState, ReactNode } from "react";
-import { HouseholdMember } from "@/lib/types";
+import { HouseholdMember, RiskBand } from "@/lib/types";
+
+const RISK_RING: Record<RiskBand, string | null> = {
+  LOW:  null,
+  MED:  "#D99A00",
+  HIGH: "#C33A4C",
+};
 
 interface Props {
   members: HouseholdMember[];
@@ -9,6 +15,7 @@ interface Props {
   activeMember: string | null;
   alertMembers?: string[];
   verdict?: string | null;
+  riskBands?: Record<string, RiskBand>;
   onSelect: (label: string) => void;
   /** Rendered at the centre of the constellation — the Voice Orb lives here. */
   centerSlot?: ReactNode;
@@ -43,6 +50,7 @@ export default function Constellation({
   activeMember,
   alertMembers = [],
   verdict,
+  riskBands = {},
   onSelect,
   centerSlot,
   hero = false,
@@ -179,13 +187,15 @@ export default function Constellation({
 
       {/* Member nodes */}
       {members.map((m, i) => {
-        const pos     = nodePosition(i, members.length, RADIUS);
-        const focused = m.role_label === focusedMember;
-        const active  = m.role_label === activeMember;
-        const alerted = alertMembers.includes(m.role_label);
-        const dimmed  = isDimming && !focused && !alerted;
+        const pos      = nodePosition(i, members.length, RADIUS);
+        const focused  = m.role_label === focusedMember;
+        const active   = m.role_label === activeMember;
+        const alerted  = alertMembers.includes(m.role_label);
+        const dimmed   = isDimming && !focused && !alerted;
         const [c1, c2] = getGradient(m.role_label);
-        const D = NODE_R * 2;
+        const D        = NODE_R * 2;
+        const riskBand = riskBands[m.role_label] ?? "LOW";
+        const riskColor = RISK_RING[riskBand];
 
         return (
           <motion.div
@@ -228,6 +238,24 @@ export default function Constellation({
                 />
               ))}
             </AnimatePresence>
+
+            {/* Risk heatmap ambient ring — always visible behind node */}
+            {riskColor && !focused && !alerted && (
+              <motion.div
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  width: D + 12, height: D + 12,
+                  left: -6, top: -6,
+                  border: `1.5px solid ${riskColor}`,
+                  opacity: riskBand === "HIGH" ? 0.7 : 0.4,
+                }}
+                animate={riskBand === "HIGH"
+                  ? { opacity: [0.4, 0.85, 0.4], scale: [1, 1.05, 1] }
+                  : { opacity: [0.3, 0.5, 0.3] }
+                }
+                transition={{ duration: riskBand === "HIGH" ? 1.4 : 2.4, repeat: Infinity }}
+              />
+            )}
 
             {/* Glow behind focused / alerted node */}
             {(focused || alerted) && (

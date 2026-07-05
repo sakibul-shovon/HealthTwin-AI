@@ -89,33 +89,59 @@ function WhyInline({ trace }: { trace: Gate1Trace }) {
 }
 
 // ── Typing Indicator ──────────────────────────────────────────────────────────
-function TypingIndicator() {
+const REASONING_STEPS = [
+  { label: "Reading your question",   delay: 0.0  },
+  { label: "Checking family records", delay: 0.55 },
+  { label: "Running safety rules",    delay: 1.1  },
+  { label: "Retrieving evidence",     delay: 1.7  },
+  { label: "Computing verdict",       delay: 2.3  },
+];
+
+function ReasoningIndicator() {
   return (
     <motion.div
-      className="flex items-end gap-3 px-4"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 8 }}
+      className="flex items-start gap-2.5 px-4"
+      initial={{ opacity: 0, x: -12 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -12 }}
     >
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+        className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5"
         style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-deep))", color: "#fff" }}
       >
         HT
       </div>
       <div
-        className="flex items-center gap-1.5 px-4 py-3.5 rounded-2xl rounded-bl-sm"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        className="px-4 py-3 rounded-2xl rounded-tl-sm"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", minWidth: 210 }}
       >
-        {[0, 1, 2].map((i) => (
-          <motion.span
-            key={i}
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: "var(--accent)" }}
-            animate={{ y: [0, -5, 0], opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.15 }}
-          />
-        ))}
+        <p className="text-[9px] font-bold uppercase tracking-widest mb-2.5" style={{ color: "var(--ink-faint)" }}>
+          AI Reasoning
+        </p>
+        <div className="space-y-1.5">
+          {REASONING_STEPS.map((step, i) => (
+            <motion.div
+              key={step.label}
+              className="flex items-center gap-2"
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: step.delay, duration: 0.22 }}
+            >
+              <motion.div
+                className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 text-[7px]"
+                style={{ background: "var(--surface-sunk)", color: "#fff" }}
+                animate={i < REASONING_STEPS.length - 1
+                  ? { background: ["var(--surface-sunk)", "var(--accent)", "var(--primary)"] }
+                  : { background: ["var(--surface-sunk)", "var(--accent)"] }
+                }
+                transition={{ delay: step.delay + 0.25, duration: 0.4, times: [0, 0.5, 1] }}
+              >
+                {i < REASONING_STEPS.length - 1 ? "✓" : "…"}
+              </motion.div>
+              <span className="text-[11px]" style={{ color: "var(--ink-soft)" }}>{step.label}</span>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </motion.div>
   );
@@ -435,7 +461,7 @@ export default function ChatPanel({ messages, isThinking, onExampleClick, onActi
               ))}
             </AnimatePresence>
             <AnimatePresence>
-              {isThinking && <TypingIndicator />}
+              {isThinking && <ReasoningIndicator />}
             </AnimatePresence>
           </>
         )}

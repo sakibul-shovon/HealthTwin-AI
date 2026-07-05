@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useCallback, useRef, useState } from "react";
-import { getHousehold, post, postVoiceConfirm, postCareNotify, getChatHistory, clearChatHistory, getBriefing } from "@/lib/api";
+import { getHousehold, post, postVoiceConfirm, postCareNotify, getChatHistory, clearChatHistory, getBriefing, getInsights } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
-import { ResponseEnvelope } from "@/lib/types";
+import { ResponseEnvelope, InsightItem, RiskBand } from "@/lib/types";
 import { useVoice } from "@/hooks/useVoice";
 import MemberRail from "@/components/MemberRail";
 import Constellation from "@/components/Constellation";
@@ -15,6 +15,7 @@ import ChatPanel from "@/components/ChatPanel";
 import UploadDropzone, { UploadDropzoneRef } from "@/components/UploadDropzone";
 import FamilyManager from "@/components/FamilyManager";
 import CommandPalette from "@/components/CommandPalette";
+import InsightFeed from "@/components/InsightFeed";
 
 export default function Home() {
   const {
@@ -45,6 +46,9 @@ export default function Home() {
   const [isManagerOpen, setManagerOpen] = useState(false);
   const [managerMemberId, setManagerMemberId] = useState<number | null>(null);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const [insights, setInsights] = useState<InsightItem[]>([]);
+  const [riskBands, setRiskBands] = useState<Record<string, RiskBand>>({});
+  const [rightTab, setRightTab] = useState<"insights" | "chat">("insights");
 
   const handleOpenManager = (id?: number) => {
     setManagerMemberId(id || null);
@@ -54,11 +58,21 @@ export default function Home() {
   // ── Load household, chat history, and daily briefing on mount ────────────
   useEffect(() => {
     const init = async () => {
-      const [data, history, briefing] = await Promise.all([
+      const [data, history, briefing, insightData] = await Promise.all([
         getHousehold(),
         getChatHistory() as Promise<{ id: number | string; role: string; text: string; envelope: ResponseEnvelope; created_at: string }[]>,
         getBriefing(),
+        getInsights(),
       ]);
+
+      if (insightData) {
+        setInsights(insightData.insights ?? []);
+        setRiskBands(insightData.risk_bands ?? {});
+        // Auto-switch to chat if no meaningful insights
+        if ((insightData.insights ?? []).filter((i: InsightItem) => i.severity !== "LOW").length === 0) {
+          setRightTab("chat");
+        }
+      }
 
       if (data) setHousehold(data);
 
@@ -578,6 +592,7 @@ export default function Home() {
                   activeMember={activeMember}
                   alertMembers={alertMembers}
                   verdict={lastResponse?.verdict ?? null}
+                  riskBands={riskBands}
                   onSelect={setActiveMember}
                   centerSlot={<VoiceOrb size="full" onClick={handleOrbClick} />}
                 />
@@ -644,27 +659,64 @@ export default function Home() {
             />
           ) : (
             <div className="flex flex-col h-full overflow-hidden">
-              {/* Panel header */}
+              {/* Tabs */}
               <div
-                className="shrink-0 px-4 py-3 flex items-center justify-between"
+                className="shrink-0 flex items-center gap-0.5 px-3 pt-2 pb-0"
                 style={{ borderBottom: "1px solid var(--border)" }}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
-                    Conversation
-                  </span>
+                {/* AI Insights tab */}
+                <button
+                  onClick={() => setRightTab("insights")}
+                  className="relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-t-xl transition-all"
+                  style={{
+                    background: rightTab === "insights" ? "var(--canvas)" : "transparent",
+                    color: rightTab === "insights" ? "var(--primary)" : "var(--ink-faint)",
+                    borderBottom: rightTab === "insights" ? "2px solid var(--primary)" : "2px solid transparent",
+                  }}
+                >
+                  <span>AI Insights</span>
+                  {insights.filter(i => i.severity === "HIGH").length > 0 && (
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: "var(--urgent)" }} />
+                      <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: "var(--urgent)" }} />
+                    </span>
+                  )}
+                  {insights.length > 0 && (
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
+                    >
+                      {insights.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Conversation tab */}
+                <button
+                  onClick={() => setRightTab("chat")}
+                  className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-t-xl transition-all"
+                  style={{
+                    background: rightTab === "chat" ? "var(--canvas)" : "transparent",
+                    color: rightTab === "chat" ? "var(--primary)" : "var(--ink-faint)",
+                    borderBottom: rightTab === "chat" ? "2px solid var(--primary)" : "2px solid transparent",
+                  }}
+                >
+                  Chat
                   {messages.length > 0 && (
                     <span
-                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                      style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: "var(--surface-sunk)", color: "var(--ink-soft)" }}
                     >
                       {messages.length}
                     </span>
                   )}
-                </div>
+                </button>
+
+                {/* Last verdict pill — right-aligned */}
+                <div className="flex-1" />
                 {lastResponse?.verdict && (
                   <span
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    className="text-[9px] font-bold px-2 py-0.5 rounded-full mb-1.5"
                     style={{
                       background: lastResponse.verdict === "UNSAFE" ? "var(--urgent-bg)"
                         : lastResponse.verdict === "CAUTION" ? "var(--watch-bg)"
@@ -681,14 +733,21 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Full-height chat */}
+              {/* Tab content */}
               <div className="flex-1 overflow-hidden min-h-0">
-                <ChatPanel
-                  messages={messages}
-                  isThinking={orbState === "thinking"}
-                  onExampleClick={(t) => handleCommand(t, "en")}
-                  onAction={handleAction}
-                />
+                {rightTab === "insights" ? (
+                  <InsightFeed
+                    insights={insights}
+                    onQuery={(q) => { handleCommand(q, "en"); setRightTab("chat"); }}
+                  />
+                ) : (
+                  <ChatPanel
+                    messages={messages}
+                    isThinking={orbState === "thinking"}
+                    onExampleClick={(t) => handleCommand(t, "en")}
+                    onAction={handleAction}
+                  />
+                )}
               </div>
             </div>
           )}

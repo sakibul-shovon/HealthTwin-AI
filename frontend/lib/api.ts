@@ -66,6 +66,17 @@ export async function getMemberTimeline(memberId: number) {
   }
 }
 
+export async function getInsights() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/ai/insights`);
+    if (!res.ok) throw new Error('Insights fetch failed');
+    return await res.json() as { insights: import('./types').InsightItem[]; risk_bands: Record<string, import('./types').RiskBand> };
+  } catch (error) {
+    console.error('Error fetching insights:', error);
+    return { insights: [], risk_bands: {} };
+  }
+}
+
 export async function getBriefing() {
   try {
     const res = await fetch(`${API_BASE_URL}/api/voice/briefing`);
