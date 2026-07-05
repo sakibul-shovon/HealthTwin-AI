@@ -66,6 +66,17 @@ export async function getMemberTimeline(memberId: number) {
   }
 }
 
+export async function getBriefing() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/voice/briefing`);
+    if (!res.ok) throw new Error('Briefing fetch failed');
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching briefing:', error);
+    return null;
+  }
+}
+
 export async function getHealth() {
   try {
     const res = await fetch(`${API_BASE_URL}/health`);

@@ -11,6 +11,7 @@ from app.agents.brain import run_brain
 from app.agents.composer import compose
 from app.agents.profile import run_profile_write
 from app.agents.care import set_reminder_from_nlu
+from app.agents.pattern import run_pattern_check
 from app.spine.emergency import scan_red_flags, build_emergency_envelope
 from app.memory.chat_store import save_turn, get_recent
 
@@ -87,6 +88,103 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
 
     return envelope
 
+
+
+@router.get("/briefing")
+def daily_briefing(db: Session = Depends(get_db)):
+    """Deterministic daily family health snapshot — no LLM call, pure DB + pattern check."""
+    from sqlalchemy.orm import joinedload
+    from app.graph.models import Member as MemberModel
+
+    household_id = _get_household_id(db)
+    language = "en"
+
+    members = (
+        db.query(MemberModel)
+        .options(
+            joinedload(MemberModel.medications),
+            joinedload(MemberModel.conditions),
+            joinedload(MemberModel.allergies),
+        )
+        .filter(MemberModel.household_id == household_id)
+        .all()
+    )
+
+    if not members:
+        return {
+            "verdict": "INFO",
+            "spoken": "No family members on record yet. Add your family to get started.",
+            "display": {
+                "title": "Family Briefing",
+                "conflict": None, "alternative": None,
+                "detail": "Add family members to begin tracking.", "member": None,
+                "interpreted": "daily briefing", "members": [],
+            },
+            "evidence": {"source": "Household records", "confidence": "HIGH", "grounding_score": 1.0},
+            "actions": [], "member_focus": None, "language": language,
+        }
+
+    # Per-member watch flags
+    watch_flags = []
+    for m in members:
+        flags = []
+        if m.kidney_impaired:
+            flags.append("kidney impairment — avoid NSAIDs")
+        if m.liver_impaired:
+            flags.append("liver impairment — check dosing")
+        if m.allergies:
+            subs = ", ".join(a.substance for a in m.allergies)
+            flags.append(f"allergy to {subs}")
+        if flags:
+            watch_flags.append(f"{m.role_label}: {'; '.join(flags)}")
+
+    # Household pattern check
+    pattern = run_pattern_check(db, household_id, language)
+    pattern_conflict = pattern["display"].get("conflict")
+    pattern_members = pattern["display"].get("members", [])
+
+    # Compose spoken summary
+    total_meds = sum(len(m.medications) for m in members)
+    parts = [f"Family health briefing: {len(members)} members, {total_meds} active medications."]
+    if watch_flags:
+        parts.append(f"Watch flags — {'; '.join(watch_flags[:2])}.")
+    if pattern_conflict:
+        parts.append(f"Pattern alert: {pattern_conflict}.")
+    else:
+        parts.append("No household patterns detected.")
+    spoken = " ".join(parts)
+
+    # Detail card (one bullet per member)
+    detail_lines = []
+    for m in members:
+        meds_str = ", ".join(med.name for med in m.medications) or "no medications"
+        detail_lines.append(f"• {m.role_label} ({m.age}y): {meds_str}")
+    if watch_flags:
+        detail_lines.append("")
+        detail_lines.extend(f"⚠ {f}" for f in watch_flags)
+    detail = "\n".join(detail_lines)
+
+    return {
+        "verdict": "CAUTION" if pattern_conflict else "INFO",
+        "spoken": spoken,
+        "display": {
+            "title": "Daily Family Briefing",
+            "conflict": pattern_conflict,
+            "alternative": None,
+            "detail": detail,
+            "member": None,
+            "interpreted": "daily briefing",
+            "members": pattern_members,
+        },
+        "evidence": {
+            "source": "Household records + pattern analysis",
+            "confidence": "HIGH",
+            "grounding_score": 1.0,
+        },
+        "actions": [],
+        "member_focus": None,
+        "language": language,
+    }
 
 
 @router.post("/confirm")

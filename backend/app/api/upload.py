@@ -67,14 +67,22 @@ async def upload_document(
         
     # Extract entities
     extracted = extract(file_bytes, file.filename, kind)
-    
+
+    # A document is "medical" if it yielded at least one recognisable entity.
+    is_medical = bool(
+        extracted.get("medications") or
+        extracted.get("conditions") or
+        extracted.get("lab_values")
+    )
+
     # Store pending
     pending_id = store_upload_pending(extracted, member_id, kind, file.filename)
-    
+
     return {
         "pending_id": pending_id,
         "filename": file.filename,
-        "extracted": extracted
+        "extracted": extracted,
+        "is_medical": is_medical,
     }
 
 from typing import Optional
@@ -133,8 +141,14 @@ def confirm_upload(
     db.commit()
     db.refresh(doc)
     
-    # 1.5 Embed and store document text chunks
-    if extracted.get("raw_text"):
+    # 1.5 Embed and store document text chunks — only for medical documents.
+    # Non-medical PDFs (research papers, receipts, etc.) must not pollute the RAG store.
+    is_medical = bool(
+        extracted.get("medications") or
+        extracted.get("conditions") or
+        extracted.get("lab_values")
+    )
+    if extracted.get("raw_text") and is_medical:
         embed_and_store_document(db, doc.id, member_id, extracted["raw_text"])
     
     # 2. Add medications and conditions

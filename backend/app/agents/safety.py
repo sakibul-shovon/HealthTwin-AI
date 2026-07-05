@@ -6,12 +6,56 @@ from app.graph.crud import resolve_member, get_member_profile
 from app.graph.models import AgentTrace
 from app.spine.gate1_rules import check_drug_safety
 from app.spine.grounded_answer import grounded_explain
-from app.agents.safety_copy import get_spoken_verdict
 
 # In-memory cache for the flagship demo to avoid LLM calls on repeated queries.
 # Values stored as deep copies so callers cannot mutate cached state.
 _FLAGSHIP_CACHE: dict[str, dict] = {}
 _CACHE_LOCK = threading.Lock()
+
+
+def get_spoken_verdict(
+    verdict: str, member: str, drug: str,
+    alternative: str = None, caregiver: str = None, language: str = "en",
+) -> str:
+    if language == "bn":
+        if verdict == "UNSAFE":
+            msg = f"{member} কে {drug} দেবেন না। এতে ঝুঁকি আছে।"
+            if alternative:
+                msg += f" এর পরিবর্তে {alternative} দিন।"
+            if caregiver:
+                msg += f" {caregiver} কে জানাবো?"
+            return msg
+        elif verdict == "CAUTION":
+            msg = f"{member} কে {drug} দেওয়ার ক্ষেত্রে সতর্ক থাকুন।"
+            if alternative:
+                msg += f" {alternative} একটি ভালো বিকল্প হতে পারে।"
+            if caregiver:
+                msg += f" {caregiver} কে জানাবো?"
+            return msg
+        elif verdict == "SAFE":
+            return f"{member} এর জন্য {drug} নিরাপদ বলে মনে হচ্ছে।"
+        else:
+            return "আমি নিশ্চিত নই। দয়া করে একজন ডাক্তারের পরামর্শ নিন।"
+    else:
+        if verdict == "UNSAFE":
+            msg = f"Don't give {member} {drug}. It's unsafe based on their profile."
+            if alternative:
+                msg += f" Give {alternative} instead."
+            if caregiver:
+                msg += f" Notify {caregiver}?"
+            return msg
+        elif verdict == "CAUTION":
+            msg = f"Be careful giving {member} {drug}."
+            if alternative:
+                msg += f" {alternative} might be safer."
+            if caregiver:
+                msg += f" Notify {caregiver}?"
+            return msg
+        elif verdict == "SAFE":
+            return f"It looks safe to give {member} {drug}."
+        else:
+            return "I can't verify this safely. Please consult a doctor or pharmacist."
+
 
 def get_cache_key(household_id: int, member_label: str, drug: str, language: str) -> str:
     return f"{household_id}:{member_label}:{drug.lower()}:{language}"

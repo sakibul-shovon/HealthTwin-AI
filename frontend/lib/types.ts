@@ -74,6 +74,13 @@ export interface ResponseEnvelope {
   pending_id?: string
   household_refresh?: boolean
   gate1_trace?: Gate1Trace
+  radar_alert?: {
+    verdict: string
+    conflict: string | null
+    detail: string
+    source: string | null
+    gate1_trace?: Gate1Trace
+  }
 }
 
 export interface MedicationInfo {

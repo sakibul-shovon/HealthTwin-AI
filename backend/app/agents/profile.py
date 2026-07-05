@@ -107,9 +107,27 @@ def run_profile_write(db: Session, household_id: int, nlu: NluResult) -> dict:
             spoken = _bi(lang,
                 bn=f"{member.role_label} এর জন্য {drug} {dose} যোগ করা হয়েছে।",
                 en=f"{drug} {dose} added to {member.role_label}'s medications.")
-            return _confirmed(spoken, lang, member.role_label,
-                              f"Added {drug} {dose} to {member.role_label}.",
-                              household_refresh=True)
+            result = _confirmed(spoken, lang, member.role_label,
+                                f"Added {drug} {dose} to {member.role_label}.",
+                                household_refresh=True)
+            # Proactive Safety Radar — immediately check the new drug against current profile
+            try:
+                from app.agents.safety import run_safety_check
+                radar = run_safety_check(
+                    db, household_id, member.role_label,
+                    drug, dose if dose != "—" else None, language=lang,
+                )
+                if radar.get("verdict") in ("UNSAFE", "CAUTION"):
+                    result["radar_alert"] = {
+                        "verdict": radar["verdict"],
+                        "conflict": radar["display"].get("conflict"),
+                        "detail": radar["display"].get("detail"),
+                        "source": (radar.get("evidence") or {}).get("source"),
+                        "gate1_trace": radar.get("gate1_trace"),
+                    }
+            except Exception:
+                pass
+            return result
 
     # ── LOG_SYMPTOM ──────────────────────────────────────────────────────────
     if intent == "LOG_SYMPTOM":

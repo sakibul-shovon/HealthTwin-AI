@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useRef, useState } from "react";
-import { getHousehold, post, postVoiceConfirm, postCareNotify, getChatHistory, clearChatHistory } from "@/lib/api";
+import { getHousehold, post, postVoiceConfirm, postCareNotify, getChatHistory, clearChatHistory, getBriefing } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
 import { ResponseEnvelope } from "@/lib/types";
 import { useVoice } from "@/hooks/useVoice";
@@ -10,11 +10,11 @@ import Constellation from "@/components/Constellation";
 import VoiceOrb from "@/components/VoiceOrb";
 import EmergencyMode from "@/components/EmergencyMode";
 import MemberTwin from "@/components/MemberTwin";
-import VerdictCard from "@/components/VerdictCard";
 import VoicePanel from "@/components/VoicePanel";
 import ChatPanel from "@/components/ChatPanel";
 import UploadDropzone, { UploadDropzoneRef } from "@/components/UploadDropzone";
 import FamilyManager from "@/components/FamilyManager";
+import CommandPalette from "@/components/CommandPalette";
 
 export default function Home() {
   const {
@@ -51,25 +51,46 @@ export default function Home() {
     setManagerOpen(true);
   };
 
-  // ── Load household & chat history on mount ────────────────────────────────
+  // ── Load household, chat history, and daily briefing on mount ────────────
   useEffect(() => {
-    getHousehold().then((data) => {
+    const init = async () => {
+      const [data, history, briefing] = await Promise.all([
+        getHousehold(),
+        getChatHistory() as Promise<{ id: number | string; role: string; text: string; envelope: ResponseEnvelope; created_at: string }[]>,
+        getBriefing(),
+      ]);
+
       if (data) setHousehold(data);
-    });
-    getChatHistory().then(
-      (history: { id: number | string; role: string; text: string; envelope: ResponseEnvelope; created_at: string }[]) => {
-        if (history && history.length > 0) {
-          const clientMessages = history.map((msg) => ({
+
+      const all = [];
+
+      // Briefing always leads — timestamped before any history
+      if (briefing) {
+        all.push({
+          id: `briefing-${Date.now()}`,
+          role: "assistant" as const,
+          text: briefing.spoken,
+          envelope: briefing as ResponseEnvelope,
+          timestamp: Date.now() - 1_000_000,
+        });
+      }
+
+      if (history && history.length > 0) {
+        all.push(
+          ...history.map((msg) => ({
             id: `db-${msg.id}`,
             role: msg.role as "user" | "assistant",
             text: msg.text,
             envelope: msg.envelope,
             timestamp: new Date(msg.created_at).getTime(),
-          }));
-          setMessages(clientMessages);
-        }
+          }))
+        );
       }
-    );
+
+      if (all.length > 0) setMessages(all);
+    };
+
+    init();
   }, [setHousehold, setMessages]);
 
   // ── Core command handler ──────────────────────────────────────────────────
@@ -233,13 +254,57 @@ export default function Home() {
     if (action.pending_id) {
       const result = await postVoiceConfirm(action.pending_id, true);
       if (result) {
-        setLastResponse(result);
-        if ((result as { household_refresh?: boolean }).household_refresh) {
+        const envelope = result as ResponseEnvelope;
+        setLastResponse(envelope);
+
+        addMessage({
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          text: envelope.spoken,
+          envelope,
+          timestamp: Date.now(),
+        });
+
+        if (envelope.household_refresh) {
           const fresh = await getHousehold();
           if (fresh) setHousehold(fresh);
         }
-        if (result.spoken) {
-          const utterance = speak(result.spoken, (result.language as "en" | "bn") ?? "en");
+
+        // Proactive radar alert — surface if medication write triggered an interaction
+        if (envelope.radar_alert && ["UNSAFE", "CAUTION"].includes(envelope.radar_alert.verdict)) {
+          const ra = envelope.radar_alert;
+          const radarEnvelope: ResponseEnvelope = {
+            verdict: ra.verdict as ResponseEnvelope["verdict"],
+            spoken: `Safety Radar: ${ra.conflict ?? ra.detail}`,
+            display: {
+              title: "Safety Radar Alert",
+              conflict: ra.conflict,
+              alternative: null,
+              detail: ra.detail,
+              member: null,
+              interpreted: "proactive safety check after medication add",
+            },
+            evidence: { source: ra.source, confidence: "HIGH", grounding_score: 1.0 },
+            actions: [],
+            member_focus: null,
+            language: "en",
+            gate1_trace: ra.gate1_trace,
+          };
+          setTimeout(() => {
+            addMessage({
+              id: `radar-${Date.now()}`,
+              role: "assistant",
+              text: radarEnvelope.spoken,
+              envelope: radarEnvelope,
+              timestamp: Date.now() + 1,
+            });
+            setLastResponse(radarEnvelope);
+            const u = speak(radarEnvelope.spoken, "en");
+            if (u) u.onend = () => setOrbState("idle");
+            else setTimeout(() => setOrbState("idle"), 2500);
+          }, 1200);
+        } else if (envelope.spoken) {
+          const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? "en");
           if (utterance) utterance.onend = () => setOrbState("idle");
           else setTimeout(() => setOrbState("idle"), 2500);
         }
@@ -331,15 +396,13 @@ export default function Home() {
                   onEdit={handleOpenManager}
                 />
               ) : (
-                <div className="flex flex-col p-4 gap-4">
-                  <VerdictCard response={lastResponse as ResponseEnvelope | null} onAction={handleAction} />
-                  <div className="min-h-[300px]">
-                    <ChatPanel
-                      messages={messages}
-                      isThinking={orbState === "thinking"}
-                      onExampleClick={(t) => { handleCommand(t, "en"); setMobilePanelOpen(false); }}
-                    />
-                  </div>
+                <div className="h-[60vh]">
+                  <ChatPanel
+                    messages={messages}
+                    isThinking={orbState === "thinking"}
+                    onExampleClick={(t) => { handleCommand(t, "en"); setMobilePanelOpen(false); }}
+                    onAction={handleAction}
+                  />
                 </div>
               )}
             </div>
@@ -411,6 +474,12 @@ export default function Home() {
 
         {/* Right controls */}
         <div className="flex items-center gap-2">
+          <CommandPalette
+            members={members}
+            onCommand={(t) => handleCommand(t, "en")}
+            onSelectMember={setActiveMember}
+            onScan={() => dropzoneRef.current?.openFileDialog()}
+          />
           <button
             onClick={() => setMobilePanelOpen((v) => !v)}
             className="lg:hidden text-[10px] font-medium px-2.5 py-1 rounded-full transition-all"
@@ -553,14 +622,15 @@ export default function Home() {
               isSTTSupported={isSTTSupported}
               onMicClick={handleMicClick}
               onAttachClick={() => dropzoneRef.current?.openFileDialog()}
+              onScanClick={() => dropzoneRef.current?.openFileDialog()}
               disabled={isProcessing}
             />
           </div>
         </div>
 
-        {/* Right: latest verdict + conversation, or member twin */}
+        {/* Right: conversation or member twin */}
         <div
-          className="hidden lg:flex flex-col w-96 shrink-0 overflow-hidden"
+          className="hidden lg:flex flex-col w-[420px] shrink-0 overflow-hidden"
           style={{
             borderLeft: "1px solid var(--border)",
             background: "var(--surface)",
@@ -574,26 +644,50 @@ export default function Home() {
             />
           ) : (
             <div className="flex flex-col h-full overflow-hidden">
-              {/* Latest verdict */}
-              <div className="shrink-0 p-4" style={{ borderBottom: "1px solid var(--border)" }}>
-                <p
-                  className="text-[10px] font-bold uppercase tracking-widest mb-2.5"
-                  style={{ color: "var(--ink-soft)" }}
-                >
-                  Latest Verdict
-                </p>
-                <VerdictCard
-                  response={lastResponse as ResponseEnvelope | null}
-                  onAction={handleAction}
-                />
+              {/* Panel header */}
+              <div
+                className="shrink-0 px-4 py-3 flex items-center justify-between"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
+                    Conversation
+                  </span>
+                  {messages.length > 0 && (
+                    <span
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                      style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
+                    >
+                      {messages.length}
+                    </span>
+                  )}
+                </div>
+                {lastResponse?.verdict && (
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{
+                      background: lastResponse.verdict === "UNSAFE" ? "var(--urgent-bg)"
+                        : lastResponse.verdict === "CAUTION" ? "var(--watch-bg)"
+                        : lastResponse.verdict === "SAFE" ? "var(--well-bg)"
+                        : "var(--surface-sunk)",
+                      color: lastResponse.verdict === "UNSAFE" ? "var(--urgent)"
+                        : lastResponse.verdict === "CAUTION" ? "var(--watch)"
+                        : lastResponse.verdict === "SAFE" ? "var(--well)"
+                        : "var(--ink-soft)",
+                    }}
+                  >
+                    {lastResponse.verdict}
+                  </span>
+                )}
               </div>
 
-              {/* Conversation history */}
+              {/* Full-height chat */}
               <div className="flex-1 overflow-hidden min-h-0">
                 <ChatPanel
                   messages={messages}
                   isThinking={orbState === "thinking"}
                   onExampleClick={(t) => handleCommand(t, "en")}
+                  onAction={handleAction}
                 />
               </div>
             </div>

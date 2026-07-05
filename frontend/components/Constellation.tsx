@@ -47,9 +47,10 @@ export default function Constellation({
   centerSlot,
   hero = false,
 }: Props) {
-  const RADIUS = hero ? 158 : 96;
+  const RADIUS = hero ? 152 : 96;
   const NODE_R = hero ? 32 : 26;             // node circle radius in px
-  const SIZE = RADIUS * 2 + NODE_R * 4 + 8;  // total svg canvas
+  const LABEL_H = hero ? 48 : 0;             // extra bottom room for role+age labels
+  const SIZE = RADIUS * 2 + NODE_R * 4 + 8 + LABEL_H;  // total svg canvas
   const cx = SIZE / 2;
   const cy = SIZE / 2;
 
