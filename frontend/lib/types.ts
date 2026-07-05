@@ -4,6 +4,24 @@ export interface EvidenceMeta {
   grounding_score: number | null
 }
 
+export interface Gate1Conflict {
+  type: 'interaction' | 'contraindication' | 'allergy' | 'dose'
+  detail: string
+  severity: 'high' | 'moderate' | 'low'
+  source: string
+}
+
+export interface Gate1Trace {
+  verdict: string
+  conflicts: Gate1Conflict[]
+  checked: {
+    interactions: boolean
+    contraindications: boolean
+    dose: boolean
+    allergy: boolean
+  }
+}
+
 export interface CriticalInfo {
   medications: string[];
   allergies: string[];
@@ -55,6 +73,7 @@ export interface ResponseEnvelope {
   needs_confirmation?: boolean
   pending_id?: string
   household_refresh?: boolean
+  gate1_trace?: Gate1Trace
 }
 
 export interface MedicationInfo {

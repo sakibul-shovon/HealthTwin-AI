@@ -35,7 +35,6 @@ export default function Home() {
     addMessage,
     setMessages,
     clearMessages,
-    emergencyActive,
     setEmergency,
   } = useTwinStore();
 
@@ -57,18 +56,20 @@ export default function Home() {
     getHousehold().then((data) => {
       if (data) setHousehold(data);
     });
-    getChatHistory().then((history: any[]) => {
-      if (history && history.length > 0) {
-        const clientMessages = history.map((msg) => ({
-          id: `db-${msg.id}`,
-          role: msg.role as "user" | "assistant",
-          text: msg.text,
-          envelope: msg.envelope,
-          timestamp: new Date(msg.created_at).getTime(),
-        }));
-        setMessages(clientMessages);
+    getChatHistory().then(
+      (history: { id: number | string; role: string; text: string; envelope: ResponseEnvelope; created_at: string }[]) => {
+        if (history && history.length > 0) {
+          const clientMessages = history.map((msg) => ({
+            id: `db-${msg.id}`,
+            role: msg.role as "user" | "assistant",
+            text: msg.text,
+            envelope: msg.envelope,
+            timestamp: new Date(msg.created_at).getTime(),
+          }));
+          setMessages(clientMessages);
+        }
       }
-    });
+    );
   }, [setHousehold, setMessages]);
 
   // ── Core command handler ──────────────────────────────────────────────────
@@ -311,7 +312,7 @@ export default function Home() {
               style={{ borderBottom: "1px solid var(--border)" }}
             >
               <p className="text-sm font-bold" style={{ color: "var(--ink)" }}>
-                {activeMemberId ? "Member Twin" : "Family Constellation"}
+                {activeMemberId ? "Member Twin" : "Verdict & Conversation"}
               </p>
               <button
                 onClick={() => setMobilePanelOpen(false)}
@@ -330,22 +331,15 @@ export default function Home() {
                   onEdit={handleOpenManager}
                 />
               ) : (
-                <div className="flex flex-col items-center p-4 gap-4">
-                  {members.length > 0 && (
-                    <Constellation
-                      members={members}
-                      focusedMember={focusedMember}
-                      activeMember={activeMember}
-                      alertMembers={alertMembers}
-                      verdict={lastResponse?.verdict ?? null}
-                      onSelect={(label) => setActiveMember(label)}
+                <div className="flex flex-col p-4 gap-4">
+                  <VerdictCard response={lastResponse as ResponseEnvelope | null} onAction={handleAction} />
+                  <div className="min-h-[300px]">
+                    <ChatPanel
+                      messages={messages}
+                      isThinking={orbState === "thinking"}
+                      onExampleClick={(t) => { handleCommand(t, "en"); setMobilePanelOpen(false); }}
                     />
-                  )}
-                  {lastResponse && (
-                    <div className="w-full px-2 pb-4">
-                      <VerdictCard response={lastResponse as ResponseEnvelope | null} onAction={handleAction} />
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
@@ -366,11 +360,11 @@ export default function Home() {
         {/* Brand */}
         <div className="flex items-center gap-3">
           <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-lg"
+            className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs"
             style={{
               background: "linear-gradient(135deg, var(--primary), var(--accent))",
-              color: "var(--canvas)",
-              boxShadow: "0 0 16px rgba(34,211,238,0.3)",
+              color: "#fff",
+              boxShadow: "var(--shadow-sm)",
             }}
           >
             HT
@@ -383,7 +377,7 @@ export default function Home() {
               HealthTwin
             </h1>
             <p className="text-[10px] font-medium" style={{ color: "var(--ink-soft)" }}>
-              Family AI Command Center
+              Living family health twin
             </p>
           </div>
         </div>
@@ -494,50 +488,54 @@ export default function Home() {
           )}
         </div>
 
-        {/* Center: Chat + Orb + Voice input */}
+        {/* Center: the Living Twin hero + voice input */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           <UploadDropzone ref={dropzoneRef} onUploadSuccess={handleUploadSuccess}>
-            {/* Chat history */}
-            <div className="flex-1 overflow-hidden">
-              <ChatPanel
-                messages={messages}
-                isThinking={orbState === "thinking"}
-                onExampleClick={(t) => handleCommand(t, "en")}
+            <div className="relative flex-1 flex flex-col items-center justify-center overflow-hidden dot-grid">
+              {/* warm radial wash behind the twin */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "radial-gradient(ellipse 55% 45% at 50% 46%, rgba(226,146,47,0.08) 0%, transparent 70%)",
+                }}
               />
-            </div>
-          </UploadDropzone>
 
-          {/* ── Voice zone ─────────────────────────────────────────────── */}
-          <div
-            className="shrink-0 flex flex-col items-center gap-3 px-5 pb-5 pt-4"
-            style={{ borderTop: "1px solid var(--border)" }}
-          >
-            {/* Orb row */}
-            <div className="flex items-center gap-4 w-full">
-              <VoiceOrb size="md" onClick={handleOrbClick} />
-              <div className="flex flex-col min-w-0 flex-1 gap-0.5">
-                <p
-                  className="text-sm font-semibold"
-                  style={{ color: "var(--ink)" }}
-                  aria-live="polite"
-                >
+              {members.length > 0 ? (
+                <Constellation
+                  hero
+                  members={members}
+                  focusedMember={focusedMember}
+                  activeMember={activeMember}
+                  alertMembers={alertMembers}
+                  verdict={lastResponse?.verdict ?? null}
+                  onSelect={setActiveMember}
+                  centerSlot={<VoiceOrb size="full" onClick={handleOrbClick} />}
+                />
+              ) : (
+                <VoiceOrb size="full" onClick={handleOrbClick} />
+              )}
+
+              {/* Status + transcript line */}
+              <div
+                className="relative z-10 mt-1 flex flex-col items-center gap-1.5 px-6 text-center max-w-md"
+                aria-live="polite"
+              >
+                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
                   {orbState === "listening" && "Listening…"}
-                  {orbState === "thinking" && "Processing…"}
+                  {orbState === "thinking" && "Thinking…"}
                   {orbState === "speaking" && "Speaking…"}
-                  {orbState === "error" && "Didn't catch that"}
-                  {orbState === "idle" && (isListening ? "Listening…" : "Ready to listen")}
+                  {orbState === "error" && "Didn't catch that — try again"}
+                  {orbState === "idle" && (isListening ? "Listening…" : "Ask about any family member")}
                 </p>
                 {transcript && (
-                  <p
-                    className="text-[11px] italic truncate"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
+                  <p className="text-xs italic" style={{ color: "var(--ink-soft)" }}>
                     &ldquo;{transcript}&rdquo;
                   </p>
                 )}
                 {focusedMember && (
                   <span
-                    className="text-[10px] font-medium w-fit px-2 py-0.5 rounded-full mt-0.5"
+                    className="text-[10px] font-medium px-2 py-0.5 rounded-full"
                     style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
                   >
                     Focus: {focusedMember}
@@ -545,8 +543,10 @@ export default function Home() {
                 )}
               </div>
             </div>
+          </UploadDropzone>
 
-            {/* Voice input panel */}
+          {/* Voice input panel */}
+          <div className="shrink-0 px-5 pb-5 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
             <VoicePanel
               onSubmit={handleCommand}
               isListening={isListening}
@@ -558,9 +558,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right: Constellation + Verdict panel */}
+        {/* Right: latest verdict + conversation, or member twin */}
         <div
-          className="hidden lg:flex flex-col w-80 shrink-0 overflow-hidden"
+          className="hidden lg:flex flex-col w-96 shrink-0 overflow-hidden"
           style={{
             borderLeft: "1px solid var(--border)",
             background: "var(--surface)",
@@ -573,82 +573,29 @@ export default function Home() {
               onEdit={handleOpenManager}
             />
           ) : (
-            <div className="flex flex-col h-full overflow-y-auto">
-              {/* Constellation hero */}
-              <div
-                className="flex items-center justify-center p-6 shrink-0 relative dot-grid"
-                style={{ minHeight: 220 }}
-              >
-                {/* Radial glow behind constellation */}
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(34,211,238,0.06) 0%, transparent 70%)",
-                  }}
+            <div className="flex flex-col h-full overflow-hidden">
+              {/* Latest verdict */}
+              <div className="shrink-0 p-4" style={{ borderBottom: "1px solid var(--border)" }}>
+                <p
+                  className="text-[10px] font-bold uppercase tracking-widest mb-2.5"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  Latest Verdict
+                </p>
+                <VerdictCard
+                  response={lastResponse as ResponseEnvelope | null}
+                  onAction={handleAction}
                 />
-                {members.length > 0 ? (
-                  <Constellation
-                    members={members}
-                    focusedMember={focusedMember}
-                    activeMember={activeMember}
-                    alertMembers={alertMembers}
-                    verdict={lastResponse?.verdict ?? null}
-                    onSelect={setActiveMember}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 opacity-40">
-                    <div className="w-3 h-3 rounded-full" style={{ background: "var(--primary)" }} />
-                    <p className="text-[10px]" style={{ color: "var(--ink-soft)" }}>
-                      Loading…
-                    </p>
-                  </div>
-                )}
               </div>
 
-              <div style={{ borderTop: "1px solid var(--border)" }} />
-
-              {/* Verdict or overview */}
-              {lastResponse ? (
-                <div className="p-4 flex flex-col gap-3 overflow-y-auto flex-1 scrollbar-thin">
-                  <p
-                    className="text-[10px] font-bold uppercase tracking-widest"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    Latest Verdict
-                  </p>
-                  <VerdictCard
-                    response={lastResponse as ResponseEnvelope | null}
-                    onAction={handleAction}
-                  />
-                </div>
-              ) : (
-                <div className="p-6 flex flex-col items-center justify-center text-center gap-3 flex-1">
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg shadow-inner"
-                    style={{
-                      background: "linear-gradient(135deg, var(--primary), var(--accent))",
-                      color: "var(--canvas)",
-                      boxShadow: "0 0 30px rgba(34,211,238,0.2)",
-                    }}
-                  >
-                    HT
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold" style={{ color: "var(--ink)" }}>
-                      {household?.name || "Family Overview"}
-                    </h3>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
-                      {members.length} member{members.length !== 1 ? "s" : ""} tracked
-                    </p>
-                  </div>
-                  <p
-                    className="text-[10px] max-w-[190px] leading-relaxed"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    Select a member to view their AI digital twin, or ask a question to see the verdict here.
-                  </p>
-                </div>
-              )}
+              {/* Conversation history */}
+              <div className="flex-1 overflow-hidden min-h-0">
+                <ChatPanel
+                  messages={messages}
+                  isThinking={orbState === "thinking"}
+                  onExampleClick={(t) => handleCommand(t, "en")}
+                />
+              </div>
             </div>
           )}
         </div>

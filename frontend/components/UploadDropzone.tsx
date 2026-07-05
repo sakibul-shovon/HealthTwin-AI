@@ -129,7 +129,7 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-50 flex items-center justify-center rounded-xl m-2"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)", border: "2px dashed var(--accent)" }}
+            style={{ backgroundColor: "rgba(15,76,85,0.30)", border: "2px dashed var(--accent)" }}
           >
             <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
               <span className="text-4xl mb-2">📄</span>

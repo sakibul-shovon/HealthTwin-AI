@@ -76,11 +76,11 @@ function EmptyState({ onPromptClick }: { onPromptClick: (t: string) => void }) {
       <div className="flex flex-col items-center gap-3">
         <div className="relative">
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center text-base font-bold shadow-2xl"
+            className="w-16 h-16 rounded-2xl flex items-center justify-center text-base font-bold"
             style={{
               background: "linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)",
-              color: "var(--canvas)",
-              boxShadow: "0 0 40px rgba(34,211,238,0.3), 0 0 80px rgba(167,139,250,0.1)",
+              color: "#fff",
+              boxShadow: "var(--shadow-lg)",
             }}
           >
             HT
@@ -154,9 +154,9 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
             className={`px-4 py-3 rounded-2xl rounded-br-sm text-sm leading-relaxed ${isBn ? "font-bn" : ""}`}
             style={{
               background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%)",
-              color: "var(--canvas)",
+              color: "#fff",
               fontWeight: 500,
-              boxShadow: "0 4px 20px rgba(34,211,238,0.2)",
+              boxShadow: "0 4px 16px rgba(15,76,85,0.18)",
             }}
           >
             {msg.text}
@@ -182,8 +182,8 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mb-5"
         style={{
           background: "linear-gradient(135deg, var(--primary), var(--primary-deep))",
-          color: "var(--canvas)",
-          boxShadow: "0 0 12px rgba(34,211,238,0.25)",
+          color: "#fff",
+          boxShadow: "var(--shadow-sm)",
         }}
       >
         HT

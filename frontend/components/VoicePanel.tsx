@@ -69,11 +69,10 @@ export default function VoicePanel({
       <div
         className="flex items-center gap-2 rounded-2xl px-3 py-2"
         style={{
-          background: "var(--glass)",
-          border: `1.5px solid ${isListening ? "var(--primary)" : "var(--border)"}`,
-          backdropFilter: "blur(16px)",
-          transition: "border-color 0.2s",
-          boxShadow: isListening ? "0 0 0 3px rgba(34,211,238,0.12)" : "none",
+          background: "var(--surface)",
+          border: `1.5px solid ${isListening ? "var(--accent)" : "var(--border)"}`,
+          transition: "border-color 0.2s, box-shadow 0.2s",
+          boxShadow: isListening ? "0 0 0 3px rgba(226,146,47,0.16)" : "var(--shadow-sm)",
         }}
       >
         {/* Language toggle */}
@@ -83,7 +82,7 @@ export default function VoicePanel({
           className="shrink-0 text-[10px] font-bold px-2 py-1 rounded-lg transition-all disabled:opacity-40"
           style={{
             background: lang === "bn" ? "var(--accent)" : "var(--surface-sunk)",
-            color: lang === "bn" ? "var(--canvas)" : "var(--ink-soft)",
+            color: lang === "bn" ? "var(--primary-deep)" : "var(--ink-soft)",
           }}
           title="Toggle language"
         >
@@ -97,8 +96,8 @@ export default function VoicePanel({
             disabled={disabled}
             className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center disabled:opacity-40"
             style={{
-              background: isListening ? "var(--primary)" : "var(--surface-sunk)",
-              boxShadow: isListening ? "0 0 10px rgba(34,211,238,0.4)" : "none",
+              background: isListening ? "var(--accent)" : "var(--surface-sunk)",
+              boxShadow: isListening ? "0 2px 10px rgba(226,146,47,0.45)" : "none",
             }}
             whileTap={{ scale: 0.92 }}
             animate={isListening ? { scale: [1, 1.1, 1] } : { scale: 1 }}
@@ -106,7 +105,7 @@ export default function VoicePanel({
             title={isListening ? "Stop listening" : "Start voice input"}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke={isListening ? "var(--canvas)" : "var(--ink-soft)"}
+              stroke={isListening ? "#fff" : "var(--ink-soft)"}
               strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="9" y="2" width="6" height="11" rx="3" />
               <path d="M5 10a7 7 0 0 0 14 0" />
@@ -161,7 +160,7 @@ export default function VoicePanel({
             background: hasText && !disabled
               ? "linear-gradient(135deg, var(--primary), var(--primary-deep))"
               : "var(--surface-sunk)",
-            boxShadow: hasText && !disabled ? "0 0 12px rgba(34,211,238,0.3)" : "none",
+            boxShadow: hasText && !disabled ? "0 3px 12px rgba(15,76,85,0.25)" : "none",
           }}
           whileTap={{ scale: 0.9 }}
         >

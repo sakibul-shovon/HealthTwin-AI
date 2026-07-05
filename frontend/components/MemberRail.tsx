@@ -11,12 +11,12 @@ interface Props {
 }
 
 const INITIALS_BG = [
-  "from-cyan-500 to-cyan-700",
-  "from-violet-500 to-violet-700",
-  "from-emerald-500 to-emerald-700",
-  "from-amber-500 to-amber-700",
+  "from-teal-600 to-teal-800",
+  "from-amber-500 to-orange-600",
+  "from-emerald-600 to-emerald-800",
+  "from-sky-600 to-blue-700",
   "from-rose-500 to-rose-700",
-  "from-indigo-500 to-indigo-700",
+  "from-violet-500 to-violet-700",
 ];
 
 function getRingColor(m: HouseholdMember): string {
@@ -114,7 +114,7 @@ export default function MemberRail({ members, activeMember, onSelect, onOpenMana
               className={`relative w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 bg-gradient-to-br ${gradClass}`}
               style={{
                 boxShadow: active
-                  ? `0 0 0 2px var(--canvas), 0 0 0 3.5px var(--primary), 0 0 18px rgba(34,211,238,0.35)`
+                  ? `0 0 0 2px var(--canvas), 0 0 0 3.5px var(--primary), 0 4px 14px rgba(15,76,85,0.28)`
                   : `0 0 0 2px var(--canvas), 0 0 0 2px ${ringColor}22`,
                 opacity: active ? 1 : 0.7,
                 color: "white",

@@ -5,28 +5,30 @@ import { useTwinStore } from "@/lib/store";
 export type OrbState = "idle" | "listening" | "thinking" | "speaking" | "error";
 type OrbSize = "full" | "md" | "sm";
 
+// Marigold is the voice signature — it stays warm across idle/listening/speaking.
+// Thinking shifts to calm petrol; error to rose. (See design brief §11.4.)
 const GRADIENT: Record<OrbState, string> = {
-  idle:      "linear-gradient(135deg, #22D3EE 0%, #06B6D4 100%)",
-  listening: "linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%)",
-  thinking:  "linear-gradient(135deg, #818CF8 0%, #6366F1 100%)",
-  speaking:  "linear-gradient(135deg, #34D399 0%, #059669 100%)",
-  error:     "linear-gradient(135deg, #F87171 0%, #DC2626 100%)",
+  idle:      "linear-gradient(135deg, #EDB35F 0%, #C1741B 100%)",
+  listening: "linear-gradient(135deg, #F4C77E 0%, #E2922F 100%)",
+  thinking:  "linear-gradient(135deg, #13636F 0%, #0A363D 100%)",
+  speaking:  "linear-gradient(135deg, #E9A94E 0%, #C1741B 100%)",
+  error:     "linear-gradient(135deg, #D9596A 0%, #A8283A 100%)",
 };
 
 const GLOW_COLOR: Record<OrbState, string> = {
-  idle:      "rgba(34,211,238,0.40)",
-  listening: "rgba(167,139,250,0.45)",
-  thinking:  "rgba(129,140,248,0.35)",
-  speaking:  "rgba(52,211,153,0.40)",
-  error:     "rgba(248,113,113,0.50)",
+  idle:      "rgba(226,146,47,0.38)",
+  listening: "rgba(242,199,120,0.50)",
+  thinking:  "rgba(15,76,85,0.34)",
+  speaking:  "rgba(226,146,47,0.42)",
+  error:     "rgba(195,58,76,0.45)",
 };
 
 const RING_COLOR: Record<OrbState, string> = {
-  idle:      "#22D3EE",
-  listening: "#A78BFA",
-  thinking:  "#818CF8",
-  speaking:  "#34D399",
-  error:     "#F87171",
+  idle:      "#E2922F",
+  listening: "#E2922F",
+  thinking:  "#0F4C55",
+  speaking:  "#C1741B",
+  error:     "#C33A4C",
 };
 
 const LABEL: Record<OrbState, string> = {
@@ -168,7 +170,7 @@ export default function VoiceOrb({ onClick, size = "full" }: VoiceOrbProps) {
             width: btn,
             height: btn,
             background: gradient,
-            boxShadow: `0 0 ${size === "full" ? 40 : 20}px ${glowColor}, 0 0 ${size === "full" ? 80 : 40}px ${glowColor.replace("0.40", "0.12").replace("0.45", "0.14").replace("0.50", "0.15")}`,
+            boxShadow: `0 ${size === "full" ? 10 : 6}px ${size === "full" ? 34 : 18}px ${glowColor}, 0 2px 8px rgba(16,38,42,0.14)`,
             transition: "background 0.4s ease, box-shadow 0.4s ease",
           }}
           animate={

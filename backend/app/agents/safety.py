@@ -169,7 +169,12 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
         },
         "actions": actions,
         "member_focus": profile.role_label,
-        "language": language
+        "language": language,
+        "gate1_trace": {
+            "verdict": gate1_result.verdict,
+            "conflicts": [c.model_dump() for c in gate1_result.conflicts],
+            "checked": gate1_result.checked.model_dump(),
+        },
     }
     
     # 6. Log trace
