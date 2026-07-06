@@ -12,13 +12,13 @@ interface Props {
   onEdit?: (id: number) => void;
 }
 
-const REPORT_TYPES: { type: string; label: string; icon: string }[] = [
-  { type: "family_summary",   label: "Family Summary",    icon: "👨‍👩‍👧" },
-  { type: "medication_report", label: "Medications",       icon: "💊" },
-  { type: "disease_history",  label: "Disease History",   icon: "🩺" },
-  { type: "emergency_summary",label: "Emergency Card",    icon: "🚨" },
-  { type: "doctor_visit",     label: "Doctor Visit",      icon: "📋" },
-  { type: "monthly",          label: "Monthly Report",    icon: "📅" },
+const REPORT_TYPES = [
+  { type: "family_summary",   label: "Family Summary",    icon: "📄" },
+  { type: "medication_report", label: "Medications",       icon: "📄" },
+  { type: "disease_history",  label: "Disease History",   icon: "📄" },
+  { type: "emergency_summary",label: "Emergency Card",    icon: "📄" },
+  { type: "doctor_visit",     label: "Doctor Visit",      icon: "📄" },
+  { type: "monthly",          label: "Monthly Report",    icon: "📄" },
 ];
 
 export default function MemberTwin({ memberId, onBack, onEdit }: Props) {
@@ -48,208 +48,178 @@ export default function MemberTwin({ memberId, onBack, onEdit }: Props) {
   };
 
   if (loading) {
-    return (
-      <div className="flex-1 flex flex-col p-4 bg-white h-full relative border-l border-gray-100">
-        <button onClick={onBack} className="absolute top-4 left-4 text-xs font-semibold text-gray-500 hover:text-gray-800 z-10">
-          ← Back
-        </button>
-        <div className="flex-1 flex items-center justify-center text-sm text-gray-400 animate-pulse">Loading digital twin...</div>
-      </div>
-    );
+    return <div className="h-full flex items-center justify-center text-slate-400 font-medium animate-pulse">Loading digital twin...</div>;
   }
-
   if (!twin) {
-    return (
-      <div className="flex-1 flex flex-col p-4 bg-white h-full relative border-l border-gray-100">
-        <button onClick={onBack} className="absolute top-4 left-4 text-xs font-semibold text-gray-500 hover:text-gray-800 z-10">
-          ← Back
-        </button>
-        <div className="flex-1 flex items-center justify-center text-sm text-red-500">Failed to load member twin.</div>
-      </div>
-    );
+    return <div className="h-full flex items-center justify-center text-red-500 font-medium">Failed to load member twin.</div>;
   }
 
   const bandColors = {
-    LOW: "bg-green-100 text-green-800 border-green-200",
-    MED: "bg-amber-100 text-amber-800 border-amber-200",
-    HIGH: "bg-red-100 text-red-800 border-red-200"
+    LOW: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    MED: "bg-amber-100 text-amber-700 border-amber-200",
+    HIGH: "bg-red-100 text-red-700 border-red-200 shadow-sm"
   };
 
   return (
     <motion.div 
-      className="flex flex-col h-full bg-white relative overflow-hidden"
-      initial={{ x: 20, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 20, opacity: 0 }}
-      transition={{ duration: 0.2 }}
+      className="h-full relative flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
     >
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-gray-50">
-        <button onClick={onBack} className="text-[11px] font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-1 transition-colors px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">
-          <span>←</span> Back
-        </button>
-        <div className="flex items-center gap-2">
-          <div className={`px-2 py-1 rounded text-[10px] font-bold border tracking-wider shadow-sm ${bandColors[twin.risk_band]}`}>
-            {twin.risk_band} RISK
-          </div>
-          <button onClick={() => onEdit && onEdit(memberId)} className="text-[14px] px-2 py-0.5 rounded text-gray-500 hover:bg-gray-200 transition-colors bg-gray-100">
-            ⋯
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 custom-scrollbar">
-        {/* Profile Info */}
-        <div className="flex flex-col items-center justify-center gap-2 mt-2">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-700 flex items-center justify-center text-2xl font-bold shadow-sm border border-indigo-200">
+      <div className="flex justify-between items-center shrink-0">
+        <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white text-lg shadow-sm">
             {twin.member.charAt(0)}
           </div>
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">{twin.member}</h2>
-            <p className="text-xs text-gray-500 font-medium mt-0.5">{twin.age} yrs • {twin.sex} {twin.caregiver && `• Caregiver: ${twin.caregiver}`}</p>
-          </div>
-        </div>
-
-        {/* AI Summary */}
-        <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
-          <h3 className="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1.5 flex items-center gap-1">
-            <span className="text-[12px]">✨</span> AI Twin Summary
-          </h3>
-          <p className="text-xs text-blue-900/80 leading-relaxed font-medium">{twin.ai_summary}</p>
-        </div>
-
-        {/* Risk Factors */}
-        {twin.risk_factors.length > 0 && (
-          <div>
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Active Risk Factors</h3>
-            <div className="flex flex-wrap gap-2">
-              {twin.risk_factors.map(f => (
-                <span key={f} className="px-2.5 py-1 bg-red-50 text-red-700 text-[10px] font-bold uppercase rounded-md border border-red-100 shadow-sm">
-                  {f.replace(/_/g, ' ')}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Medical State */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-sm">
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1">
-              <span>🩺</span> Conditions
-            </h3>
-            {twin.conditions.length > 0 ? (
-              <ul className="text-xs text-gray-700 space-y-1.5 font-medium">
-                {twin.conditions.map(c => <li key={c} className="flex items-start gap-1"><span className="text-gray-300 mt-0.5">•</span> {c}</li>)}
-              </ul>
-            ) : <span className="text-xs text-gray-400 italic">None</span>}
-          </div>
-          
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-sm">
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1">
-              <span>⚠️</span> Allergies
-            </h3>
-            {twin.allergies.length > 0 ? (
-              <ul className="text-xs text-red-600 font-semibold space-y-1.5">
-                {twin.allergies.map(a => <li key={a} className="flex items-start gap-1"><span className="text-red-300 mt-0.5">•</span> {a}</li>)}
-              </ul>
-            ) : <span className="text-xs text-gray-400 italic">None</span>}
-          </div>
-        </div>
-
-        {/* Medications */}
-        <div>
-          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center justify-between px-1">
-            <span>💊 Medications ({twin.medications.length})</span>
-          </h3>
-          <div className="flex flex-col gap-2">
-            {twin.medications.length > 0 ? twin.medications.map(m => (
-              <div key={m} className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 shadow-sm flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0"></div>
-                {m}
-              </div>
-            )) : <p className="text-xs text-gray-400 italic px-1">No active medications.</p>}
-          </div>
-        </div>
-
-        {/* Timeline */}
-        <div className="mt-2 pb-6">
-          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2 px-1 flex items-center gap-1">
-            <span>⏱️</span> Recent Events
-          </h3>
-          {events.length > 0 ? (
-            <div className="flex flex-col gap-0 px-1">
-              {events.slice(0, 5).map((ev, i) => (
-                <div key={ev.id} className="flex gap-3 relative pb-4">
-                  {i !== events.slice(0, 5).length - 1 && (
-                    <div className="absolute top-6 bottom-0 left-[11px] w-[2px] bg-gray-100 rounded-full"></div>
-                  )}
-                  <div className="w-6 h-6 shrink-0 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center z-10 shadow-sm text-[10px]">
-                    {ev.event_type === 'safety_alert' ? '⚠️' : ev.event_type === 'symptom_logged' ? '🤒' : '📝'}
-                  </div>
-                  <div className="flex-1 pt-0.5">
-                    <p className="text-xs font-bold text-gray-700 capitalize flex items-center justify-between">
-                      {ev.event_type.replace('_', ' ')}
-                      <span className="text-[9px] font-medium text-gray-400 uppercase tracking-wider">
-                        {new Date(ev.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </span>
-                    </p>
-                    {ev.detail && (
-                      <div className="mt-1.5 text-[11px] text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100 font-medium">
-                        {ev.event_type === 'safety_alert' ? (
-                          <span className="text-red-700">{ev.detail.drug}: {ev.detail.conflict}</span>
-                        ) : ev.event_type === 'symptom_logged' ? (
-                          <span>{ev.detail.symptom} {ev.detail.severity ? `(${ev.detail.severity})` : ''}</span>
-                        ) : ev.event_type === 'medication_added' ? (
-                          <span>Added: {ev.detail.name} {ev.detail.dose}</span>
-                        ) : (
-                          JSON.stringify(ev.detail)
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400 italic px-1">No recent events.</p>
-          )}
-        </div>
-
-        {/* Reports section */}
-        <div className="pb-6">
-          <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2 px-1 flex items-center gap-1">
-            <span>📄</span> Generate Reports
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {REPORT_TYPES.map(({ type, label, icon }) => (
-              <button
-                key={type}
-                onClick={() => handleGenerateReport(type)}
-                disabled={reportLoading}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-indigo-50 hover:border-indigo-200 text-left transition-colors disabled:opacity-50 disabled:cursor-wait shadow-sm"
-              >
-                <span className="text-sm">{icon}</span>
-                <span className="text-[11px] font-semibold text-gray-700 leading-tight">{label}</span>
-              </button>
-            ))}
-          </div>
-          {reportLoading && (
-            <p className="text-[11px] text-indigo-500 text-center mt-2 animate-pulse">Generating report…</p>
-          )}
+          {twin.member}
+        </h2>
+        <div className="flex items-center gap-3">
+           <div className={`px-3 py-1 rounded-full text-xs font-bold border tracking-widest ${bandColors[twin.risk_band]}`}>
+             {twin.risk_band} RISK
+           </div>
+           {onEdit && (
+             <button onClick={() => onEdit(memberId)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+             </button>
+           )}
         </div>
       </div>
 
-      {/* Report overlay */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(180px,auto)]">
+        
+        {/* Bento: Profile Details & Risk */}
+        <div className="col-span-1 bg-slate-50 p-5 rounded-2xl flex flex-col gap-4 border border-slate-200">
+           <div className="flex justify-between items-start">
+             <div>
+               <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Demographics</p>
+               <p className="text-lg font-bold text-slate-800 mt-1">{twin.age} yrs • {twin.sex}</p>
+             </div>
+             {twin.caregiver && (
+               <div className="text-right">
+                 <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Caregiver</p>
+                 <p className="text-sm font-semibold text-blue-600 mt-1">{twin.caregiver}</p>
+               </div>
+             )}
+           </div>
+
+           {twin.risk_factors.length > 0 && (
+             <div className="mt-auto">
+               <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">Risk Factors</p>
+               <div className="flex flex-wrap gap-2">
+                 {twin.risk_factors.map(f => (
+                   <span key={f} className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 text-[10px] font-bold uppercase rounded-md shadow-sm">
+                     {f.replace(/_/g, ' ')}
+                   </span>
+                 ))}
+               </div>
+             </div>
+           )}
+        </div>
+
+        {/* Bento: AI Summary */}
+        <div className={`col-span-1 md:col-span-2 bg-blue-50/50 p-5 rounded-2xl relative overflow-hidden border ${twin.risk_band === 'HIGH' ? 'border-red-200' : 'border-blue-100'}`}>
+           <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+           <h3 className="text-xs font-bold text-blue-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+             AI Twin Summary
+           </h3>
+           <p className="text-sm text-slate-700 leading-relaxed font-medium">{twin.ai_summary}</p>
+        </div>
+
+        {/* Bento: Conditions & Allergies */}
+        <div className="col-span-1 md:col-span-2 grid grid-cols-2 gap-4">
+           <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                 Conditions
+              </h3>
+              {twin.conditions.length > 0 ? (
+                <ul className="text-sm text-slate-700 space-y-2 font-medium">
+                  {twin.conditions.map(c => <li key={c} className="flex items-start gap-2"><span className="text-blue-500 mt-0.5">•</span> {c}</li>)}
+                </ul>
+              ) : <span className="text-sm text-slate-400 italic">None logged</span>}
+           </div>
+           
+           <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                 Allergies
+              </h3>
+              {twin.allergies.length > 0 ? (
+                <ul className="text-sm text-red-600 font-semibold space-y-2">
+                  {twin.allergies.map(a => <li key={a} className="flex items-start gap-2"><span className="text-red-400 mt-0.5">•</span> {a}</li>)}
+                </ul>
+              ) : <span className="text-sm text-slate-400 italic">None known</span>}
+           </div>
+        </div>
+
+        {/* Bento: Timeline (Tall) */}
+        <div className="col-span-1 row-span-2 bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col h-full overflow-hidden">
+           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+             Health Events
+           </h3>
+           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-4">
+             {events.length > 0 ? events.map((ev, i) => (
+                <div key={ev.id} className="relative pl-6 pb-2">
+                  {i !== events.length - 1 && <div className="absolute top-3 bottom-0 left-2 w-[1px] bg-slate-200"></div>}
+                  <div className={`absolute left-0 top-1 w-4 h-4 rounded-full border-2 border-white z-10 ${ev.event_type === 'safety_alert' ? 'bg-red-500' : ev.event_type === 'symptom_logged' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+                  <p className="text-xs font-bold text-slate-800 capitalize">{ev.event_type.replace('_', ' ')}</p>
+                  <p className="text-[10px] text-slate-400 mb-1">{new Date(ev.created_at).toLocaleDateString()}</p>
+                  {ev.detail && (
+                    <div className="text-[11px] text-slate-600 bg-white p-2 rounded border border-slate-200">
+                       {ev.event_type === 'safety_alert' ? <span className="text-red-600 font-medium">{ev.detail.drug}: {ev.detail.conflict}</span> : JSON.stringify(ev.detail).replace(/["{}]/g, '')}
+                    </div>
+                  )}
+                </div>
+             )) : <p className="text-xs text-slate-400 italic">No recent events.</p>}
+           </div>
+        </div>
+
+        {/* Bento: Medications */}
+        <div className="col-span-1 md:col-span-2 bg-slate-50 border border-slate-200 p-5 rounded-2xl">
+           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+             Active Medications ({twin.medications.length})
+           </h3>
+           <div className="flex flex-wrap gap-2">
+             {twin.medications.length > 0 ? twin.medications.map(m => (
+               <div key={m} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 flex items-center gap-2 shadow-sm">
+                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                 {m}
+               </div>
+             )) : <p className="text-sm text-slate-400 italic">No active medications.</p>}
+           </div>
+        </div>
+
+        {/* Bento: Export/Reports */}
+        <div className="col-span-1 md:col-span-3 bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col gap-3">
+           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+             Export Medical Reports
+           </h3>
+           <div className="flex flex-wrap gap-3">
+             {REPORT_TYPES.map(({ type, label, icon }) => (
+               <button
+                 key={type}
+                 onClick={() => handleGenerateReport(type)}
+                 disabled={reportLoading}
+                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition-all shadow-sm disabled:opacity-50"
+               >
+                 <span className="text-sm">{icon}</span>
+                 <span className="text-xs font-semibold">{label}</span>
+               </button>
+             ))}
+             {reportLoading && <span className="text-xs text-blue-600 font-medium animate-pulse flex items-center ml-2">Generating...</span>}
+           </div>
+        </div>
+
+      </div>
+
       <AnimatePresence>
         {activeReport && (
           <motion.div
-            className="absolute inset-0 z-20 bg-white flex flex-col"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="fixed inset-0 z-50 bg-white flex flex-col p-8"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
           >
             <ReportView report={activeReport} onClose={() => setActiveReport(null)} />
           </motion.div>

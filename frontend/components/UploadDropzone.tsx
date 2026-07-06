@@ -230,24 +230,24 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="absolute bottom-4 left-4 right-4 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100"
+            className="absolute bottom-4 left-4 right-4 z-50 bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200"
           >
-            <div className="p-4 bg-[var(--primary)] text-white flex justify-between items-center">
-              <h3 className="font-bold flex items-center gap-2">
-                <span>📄</span> Extracted Data
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+              <h3 className="font-semibold flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                Extracted Data
               </h3>
-              <span className="text-xs opacity-80">{preview.filename}</span>
+              <span className="text-xs text-slate-300 font-medium">{preview.filename}</span>
             </div>
 
-            <div className="p-4 max-h-[50vh] overflow-y-auto">
+            <div className="p-4 max-h-[50vh] overflow-y-auto custom-scrollbar">
               {/* Non-medical warning */}
               {preview.is_medical === false && (
-                <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm"
-                  style={{ background: "var(--watch-bg)", border: "1px solid var(--watch)", color: "var(--watch)" }}>
-                  <span className="shrink-0 mt-0.5">⚠</span>
+                <div className="mb-4 flex items-start gap-2 px-3 py-3 rounded-xl text-sm bg-amber-50 border border-amber-200 text-amber-800">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                   <div>
-                    <p className="font-semibold text-[13px]">No medical data found</p>
-                    <p className="text-[11px] mt-0.5 opacity-80">
+                    <p className="font-bold text-[13px]">No medical data found</p>
+                    <p className="text-[11px] mt-0.5 opacity-90">
                       This document does not appear to be a prescription or lab report.
                       The file will be saved but nothing will be added to the health profile.
                     </p>
@@ -256,32 +256,32 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
               )}
 
               <div className="mb-4">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-white/50 uppercase tracking-wider mb-2">
                   Assign to Member
                 </label>
                 <select
                   value={selectedMember}
                   onChange={(e) => setSelectedMember(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-gray-50 text-sm outline-none focus:border-[var(--accent)]"
+                  className="w-full p-2 border border-white/10 rounded-lg bg-white/5 text-sm text-white outline-none focus:border-accent"
                   disabled
                 >
                   {household?.members.map((m) => (
                     <option key={m.id} value={m.id}>{m.role_label}</option>
                   ))}
                 </select>
-                <p className="text-[10px] text-gray-400 mt-1">
+                <p className="text-[10px] text-white/30 mt-1">
                   * Locked to member specified at upload for this demo.
                 </p>
               </div>
 
               {(preview.extracted?.medications?.length ?? 0) > 0 && (
                 <div className="mb-3">
-                  <h4 className="text-xs font-bold text-[var(--accent)] uppercase mb-1">Medications</h4>
+                  <h4 className="text-xs font-bold text-accent uppercase mb-1">Medications</h4>
                   <ul className="text-sm space-y-1">
                     {preview.extracted!.medications!.map((med, i) => (
-                      <li key={i} className="flex justify-between bg-gray-50 p-2 rounded">
-                        <span className="font-medium text-gray-800">{med.name}</span>
-                        <span className="text-gray-500">{med.dose}</span>
+                      <li key={i} className="flex justify-between bg-white/5 border border-white/10 p-2 rounded text-white">
+                        <span className="font-medium">{med.name}</span>
+                        <span className="text-white/50">{med.dose}</span>
                       </li>
                     ))}
                   </ul>
@@ -290,10 +290,10 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
 
               {(preview.extracted?.conditions?.length ?? 0) > 0 && (
                 <div className="mb-3">
-                  <h4 className="text-xs font-bold text-[var(--urgent)] uppercase mb-1">Conditions</h4>
+                  <h4 className="text-xs font-bold text-urgent uppercase mb-1">Conditions</h4>
                   <div className="flex flex-wrap gap-2">
                     {preview.extracted!.conditions!.map((c, i) => (
-                      <span key={i} className="bg-red-50 text-[var(--urgent)] text-xs px-2 py-1 rounded-full font-medium">
+                      <span key={i} className="bg-urgent/10 text-urgent border border-urgent/20 text-xs px-2 py-1 rounded-full font-medium">
                         {c}
                       </span>
                     ))}
@@ -302,22 +302,21 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
               )}
             </div>
 
-            <div className="p-4 bg-gray-50 flex justify-end gap-3 border-t">
+            <div className="p-4 bg-white/5 flex justify-end gap-3 border-t border-white/10">
               <button
                 onClick={() => setPreview(null)}
-                className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-sm font-semibold text-white/50 hover:text-white transition-colors"
                 disabled={isUploading}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirm}
-                className="px-5 py-2 text-sm font-bold text-white rounded-xl shadow transition-transform active:scale-95 flex items-center gap-2"
-                style={{ backgroundColor: "var(--primary)" }}
+                className="px-5 py-2 text-sm font-bold text-white rounded-xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 bg-primary hover:bg-primary-deep"
                 disabled={isUploading}
               >
                 {isUploading
-                  ? <span className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" />
+                  ? <span className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin" />
                   : preview?.is_medical === false ? "Save Document Only" : "Save to Profile"}
               </button>
             </div>
