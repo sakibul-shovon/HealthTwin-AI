@@ -3,21 +3,39 @@
 import { useEffect, useState } from "react";
 import SidebarNav from "./SidebarNav";
 import MobileNav from "./MobileNav";
+import SamanthaBar from "@/components/SamanthaBar";
 import { useTwinStore } from "@/lib/store";
+import { VoiceCommandProvider } from "@/lib/VoiceCommandContext";
 import EmergencyMode from "@/components/EmergencyMode";
 import { postCareNotify, getHousehold, getChatHistory } from "@/lib/api";
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { notifications, dismissNotification, addNotification, setOrbState, setHousehold, setMessages, setLastResponse } = useTwinStore();
+function ShellInner({ children }: { children: React.ReactNode }) {
+  const {
+    notifications,
+    dismissNotification,
+    addNotification,
+    setOrbState,
+    setHousehold,
+    setMessages,
+    setLastResponse,
+    theme,
+    setTheme,
+  } = useTwinStore();
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+
+    // Apply saved theme to DOM
+    const saved = localStorage.getItem("ht-theme") as "light" | "dark" | null;
+    if (saved === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+      setTheme("dark");
+    }
+
     const init = async () => {
-      const [hh, history] = await Promise.all([
-        getHousehold(),
-        getChatHistory(10)
-      ]);
+      const [hh, history] = await Promise.all([getHousehold(), getChatHistory(10)]);
       if (hh) setHousehold(hh);
       if (history && history.length > 0) {
         setMessages(history);
@@ -37,7 +55,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     pending_id?: string;
   }) {
     if (action.type === "notify_caregiver" && action.target) {
-      const result = await postCareNotify(action.target, "Safety alert from HealthTwin");
+      const result = await postCareNotify(action.target, "Safety alert from Samantha");
       if (result?.notification) {
         addNotification(result.notification);
         setOrbState("speaking");
@@ -53,14 +71,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--canvas)" }}>
+      {/* Desktop sidebar */}
       <div className="hidden lg:block shrink-0 h-full z-10">
         <SidebarNav />
       </div>
-      
+
+      {/* Main content column */}
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
         <main className="flex-1 overflow-y-auto relative custom-scrollbar flex flex-col min-h-0">
           {children}
         </main>
+
+        {/* Samantha voice bar — always visible above mobile nav */}
+        <SamanthaBar />
+
         <MobileNav />
       </div>
 
@@ -68,7 +92,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Toast notifications */}
       {notifications.length > 0 && (
-        <div className="fixed bottom-20 lg:bottom-6 right-6 z-50 flex flex-col gap-2 max-w-xs">
+        <div className="fixed bottom-24 lg:bottom-20 right-4 z-50 flex flex-col gap-2 max-w-xs">
           {notifications.map((n) => (
             <div
               key={n.id}
@@ -96,5 +120,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <VoiceCommandProvider>
+      <ShellInner>{children}</ShellInner>
+    </VoiceCommandProvider>
   );
 }

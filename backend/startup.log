@@ -1,4 +1,155 @@
-INFO:     Started server process [5156]
+INFO:     Will watch for changes in these directories: ['d:\\Projects\\HealthTwin AI\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [14252] using WatchFiles
+INFO:     Started server process [22076]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58117 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58119 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58120 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58116 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58118 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50183 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50181 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50182 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:57988 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:60691 - "POST /api/voice/command HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:54472 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:64591 - "POST /api/voice/command HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:64054 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:58588 - "POST /api/voice/command HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:60711 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:50604 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50605 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50607 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50606 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49243 - "GET /api/emergency/21/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49244 - "GET /api/emergency/21/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52943 - "GET /api/emergency/20/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60397 - "GET /api/emergency/20/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49340 - "GET /api/emergency/18/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58216 - "GET /api/emergency/18/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59905 - "GET /api/emergency/19/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61234 - "GET /api/emergency/19/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52126 - "GET /api/member/20/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52125 - "GET /api/member/21/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52127 - "GET /api/member/18/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52128 - "GET /api/member/19/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57780 - "GET /api/member/20/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57781 - "GET /api/member/21/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60716 - "GET /api/member/19/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60718 - "GET /api/member/18/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51376 - "POST /api/voice/command HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:56894 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:53861 - "POST /api/voice/command HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:63268 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:53550 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55932 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55934 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55933 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'app\graph\models.py'. Reloading...
+ INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22076]
+INFO:     Started server process [3844]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'alembic\versions\c3f2a891d045_add_chat_sessions.py'. Reloading...
+ INFO:     Shutting down
+INFO:     Waiting for connections to close. (CTRL+C to force quit)
+INFO:     127.0.0.1:64883 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58621 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64882 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64884 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3844]
+WARNING:  WatchFiles detected changes in 'app\api\chat.py', 'app\graph\schemas.py', 'app\api\voice.py', 'app\agents\brain.py', 'app\memory\chat_store.py'. Reloading...
+ Process SpawnProcess-3:
+Traceback (most recent call last):
+  File "C:\Users\Rider\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Users\Rider\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\Projects\HealthTwin AI\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 73, in subprocess_started
+    sys.stdin = os.fdopen(stdin_fileno)  # pragma: full coverage
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1066, in fdopen
+  File "<frozen codecs>", line 309, in __init__
+KeyboardInterrupt
+INFO:     Started server process [20116]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:58402 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58403 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61127 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53601 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56904 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56903 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56858 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63534 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56859 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63535 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58490 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50889 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62269 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49834 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62268 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64108 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52495 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58934 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58936 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58935 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57955 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49374 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57954 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57956 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50522 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62476 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62478 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62477 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63219 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63221 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63218 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63220 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56467 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59428 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50298 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59767 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53920 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53919 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59093 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59092 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53489 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55784 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58606 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56315 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51128 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51127 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51129 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62709 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59254 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59255 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60053 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57707 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65363 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50143 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65362 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50142 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63209 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60876 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59325 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59324 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58385 - "GET /api/chat/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58386 - "GET /api/chat/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53214 - "POST /api/chat/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57931 - "PATCH /api/chat/sessions/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54993 - "POST /api/voice/command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60983 - "POST /api/voice/command HTTP/1.1" 200 OK

@@ -30,6 +30,7 @@ export function useHealthTwinCommand() {
       onListeningEnd: () => {
         if (useTwinStore.getState().orbState === "listening") setOrbState("idle");
       },
+      voiceEnabled,
     });
 
   const handleCommand = useCallback(
@@ -56,9 +57,12 @@ export function useHealthTwinCommand() {
         router.push("/ask");
       }
 
+      const { selectedFamilyMembers, currentSessionId } = useTwinStore.getState();
       const data = await post("/api/voice/command", {
         transcript: inputTranscript,
         language: lang,
+        ...(selectedFamilyMembers.length > 0 && { member_focus: selectedFamilyMembers }),
+        ...(currentSessionId !== null && { session_id: currentSessionId }),
       });
 
       if (data) {

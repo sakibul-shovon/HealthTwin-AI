@@ -30,6 +30,8 @@ def _get_household_id(db: Session) -> int:
 class CommandRequest(BaseModel):
     transcript: str = Field(..., max_length=1000)
     language: Optional[str] = None
+    session_id: Optional[int] = None
+    member_focus: Optional[list[str]] = None
 
 
 class ConfirmRequest(BaseModel):
@@ -43,10 +45,11 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
     language = "bn" if (req.language == "bn" or detect_bengali(req.transcript)) else "en"
 
     # ── Recent turns → chat history for the brain (oldest→newest) ─────────────
-    recent_turns = get_recent(db, household_id, limit=6)
+    # get_recent already returns oldest→newest; do NOT reverse again.
+    recent_turns = get_recent(db, household_id, limit=20, session_id=req.session_id)
     history = [
         {"role": t.role, "content": t.text}
-        for t in reversed(recent_turns)
+        for t in recent_turns
         if t.role in ("user", "assistant") and t.text
     ]
 
@@ -78,11 +81,14 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
 
     try:
         save_turn(db=db, household_id=household_id, role="user",
-                  text=req.transcript, language=language)
+                  text=req.transcript, language=language, session_id=req.session_id)
         save_turn(db=db, household_id=household_id, role="assistant",
                   text=envelope.get("spoken", ""), envelope=envelope,
                   intent=envelope.get("intent"), member_focus=envelope.get("member_focus"),
-                  language=envelope.get("language", "en"))
+                  language=envelope.get("language", "en"), session_id=req.session_id)
+        if req.session_id:
+            from app.memory.chat_store import touch_session
+            touch_session(db, req.session_id)
     except Exception as e:
         print(f"Persistence error: {e}")
 

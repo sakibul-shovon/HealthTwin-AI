@@ -139,19 +139,34 @@ class KBChunk(Base):
     embedding = Column(JSON, nullable=True)
 
 
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    household_id = Column(Integer, ForeignKey("households.id"), nullable=False)
+    title = Column(String, nullable=False, default="New chat")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    household = relationship("Household")
+    messages = relationship("ChatMessage", back_populates="session",
+                            cascade="all, delete-orphan", order_by="ChatMessage.id")
+
+
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     id = Column(Integer, primary_key=True, index=True)
     household_id = Column(Integer, ForeignKey("households.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=True, index=True)
     role = Column(String, nullable=False)          # "user" | "assistant"
     text = Column(Text, nullable=False)
-    envelope = Column(JSON, nullable=True)         # full response envelope (assistant turns)
+    envelope = Column(JSON, nullable=True)
     intent = Column(String, nullable=True)
     member_focus = Column(String, nullable=True)
     language = Column(String, default="en")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     household = relationship("Household")
+    session = relationship("ChatSession", back_populates="messages")
 
 
 class HealthEvent(Base):

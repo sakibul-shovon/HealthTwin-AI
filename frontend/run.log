@@ -1,0 +1,57 @@
+
+> frontend@0.1.0 dev
+> next dev --port 3000
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 6.6s
+ ○ Compiling / ...
+ ✓ Compiled / in 14s (1413 modules)
+ GET / 200 in 15146ms
+ ✓ Compiled in 974ms (700 modules)
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../typescript/lib/typescript' in d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build for build dependencies doesn't lead to expected result 'D:\Projects\HealthTwin AI\frontend\node_modules\typescript\lib\typescript.js', but to 'd:\Projects\HealthTwin AI\frontend\node_modules\typescript\lib\typescript.js' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../typescript/lib/typescript (expected D:\Projects\HealthTwin AI\frontend\node_modules\typescript\lib\typescript.js)
+<w>  at file dependencies d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file dependencies d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack-config.js
+<w>  at file d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack-config.js
+<w>  at file dependencies d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at file d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at resolve commonjs d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../typescript/lib/typescript' in d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build for build dependencies doesn't lead to expected result 'D:\Projects\HealthTwin AI\frontend\node_modules\typescript\lib\typescript.js', but to 'd:\Projects\HealthTwin AI\frontend\node_modules\typescript\lib\typescript.js' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../typescript/lib/typescript (expected D:\Projects\HealthTwin AI\frontend\node_modules\typescript\lib\typescript.js)
+<w>  at file dependencies d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file dependencies d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack-config.js
+<w>  at file d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack-config.js
+<w>  at file dependencies d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at file d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at resolve commonjs d:\Projects\HealthTwin AI\frontend\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+ GET / 200 in 79ms
+(node:14712) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1326ms (745 modules)
+ GET /favicon.ico 200 in 1601ms
+ ○ Compiling /ask ...
+ ✓ Compiled /ask in 1043ms (1441 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 974ms (1412 modules)
+ GET /settings 404 in 290ms
+ ○ Compiling /emergency ...
+ ✓ Compiled /emergency in 756ms (1432 modules)
+ ○ Compiling /records ...
+ ✓ Compiled /records in 1679ms (1442 modules)
+ ○ Compiling /family ...
+ ✓ Compiled /family in 921ms (1454 modules)
+ ✓ Compiled in 1701ms (1450 modules)
+ ✓ Compiled in 783ms (1436 modules)
+ ✓ Compiled in 528ms (1436 modules)
+ ✓ Compiled in 511ms (1436 modules)
+ ✓ Compiled in 582ms (1436 modules)
+ ✓ Compiled in 494ms (1436 modules)
+ ✓ Compiled in 553ms (1436 modules)
+ ✓ Compiled in 423ms (1436 modules)
+ ✓ Compiled in 2.2s (1456 modules)

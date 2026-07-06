@@ -3,8 +3,8 @@ import "./globals.css";
 import AppShell from "@/components/shell/AppShell";
 
 export const metadata: Metadata = {
-  title: "HealthTwin — Family Command Center",
-  description: "Voice-controlled health intelligence for the whole family",
+  title: "Samantha — AI Family Assistant",
+  description: "Your personal AI companion for family health and wellbeing",
 };
 
 export default function RootLayout({

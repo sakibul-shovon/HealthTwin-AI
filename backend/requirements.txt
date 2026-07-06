@@ -15,3 +15,5 @@ sentence-transformers
 rank-bm25
 numpy
 pytest
+kokoro>=0.9.4
+

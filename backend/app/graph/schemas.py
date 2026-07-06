@@ -142,6 +142,7 @@ class HouseholdSchema(BaseModel):
 class ChatMessageSchema(BaseModel):
     id: int
     household_id: int
+    session_id: Optional[int] = None
     role: str
     text: str
     envelope: Optional[Dict] = None
@@ -149,7 +150,7 @@ class ChatMessageSchema(BaseModel):
     member_focus: Optional[str] = None
     language: str = "en"
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 

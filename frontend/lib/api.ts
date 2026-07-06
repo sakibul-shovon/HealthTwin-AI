@@ -22,6 +22,48 @@ export async function getChatHistory(limit = 50) {
   }
 }
 
+// ── Chat sessions ─────────────────────────────────────────────────────────────
+
+export async function getSessions() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/sessions`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Sessions fetch failed');
+    return await res.json();
+  } catch { return []; }
+}
+
+export async function createSession(title = 'New chat') {
+  return post('/api/chat/sessions', { title });
+}
+
+export async function renameSession(id: number, title: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) throw new Error('Rename failed');
+    return await res.json();
+  } catch { return null; }
+}
+
+export async function deleteSession(id: number) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    return await res.json();
+  } catch { return null; }
+}
+
+export async function getSessionMessages(sessionId: number, limit = 100) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${sessionId}/messages?limit=${limit}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Messages fetch failed');
+    return await res.json();
+  } catch { return []; }
+}
+
 export async function clearChatHistory() {
   try {
     const res = await fetch(`${API_BASE_URL}/api/chat/history`, { method: 'DELETE' });

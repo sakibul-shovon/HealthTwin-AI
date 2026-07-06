@@ -17,6 +17,8 @@ interface Props {
   verdict?: string | null;
   riskBands?: Record<string, RiskBand>;
   onSelect: (label: string) => void;
+  /** Role labels of members selected as Samantha context (multi-select). */
+  selectedMembers?: string[];
   /** Rendered at the centre of the constellation — the Voice Orb lives here. */
   centerSlot?: ReactNode;
   /** Larger, center-stage sizing for the hero layout. */
@@ -52,6 +54,7 @@ export default function Constellation({
   verdict,
   riskBands = {},
   onSelect,
+  selectedMembers = [],
   centerSlot,
   hero = false,
 }: Props) {
@@ -191,6 +194,7 @@ export default function Constellation({
         const focused  = m.role_label === focusedMember;
         const active   = m.role_label === activeMember;
         const alerted  = alertMembers.includes(m.role_label);
+        const selected = selectedMembers.includes(m.role_label);
         const dimmed   = isDimming && !focused && !alerted;
         const [c1, c2] = getGradient(m.role_label);
         const D        = NODE_R * 2;
@@ -272,6 +276,21 @@ export default function Constellation({
               />
             )}
 
+            {/* Selected-context ring — user picked this member for Samantha */}
+            {selected && !focused && (
+              <motion.div
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  width: D + 10, height: D + 10,
+                  left: -5, top: -5,
+                  border: `2px solid var(--primary)`,
+                  opacity: 0.5,
+                }}
+                animate={{ opacity: [0.4, 0.75, 0.4] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            )}
+
             {/* Alert pulsing ring */}
             {alerted && !focused && (
               <motion.div
@@ -325,6 +344,20 @@ export default function Constellation({
             >
               {m.role_label[0].toUpperCase()}
             </motion.div>
+
+            {/* Selected-context indicator dot */}
+            {selected && !focused && (
+              <div
+                className="absolute z-20"
+                style={{
+                  width: 8, height: 8,
+                  borderRadius: "50%",
+                  background: "var(--primary)",
+                  top: -2, right: -2,
+                  border: "1.5px solid var(--surface)",
+                }}
+              />
+            )}
 
             {/* Name label below node */}
             <div className="flex flex-col items-center mt-1.5" style={{ width: 64, marginLeft: -(64 - D) / 2 }}>
