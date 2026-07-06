@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     # Optional: force a specific Groq model for the brain (tried before the fallback chain).
     GROQ_BRAIN_MODEL: str = ""
     DATABASE_URL: str = "postgresql://postgres:postgres@127.0.0.1:5433/healthtwin"
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     # Pattern Agent: dengue-season demo flag + symptom-cluster rolling window
     DENGUE_SEASON: bool = True
     CLUSTER_WINDOW_HOURS: int = 48

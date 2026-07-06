@@ -1,8 +1,8 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = '';
 
 export async function getHousehold() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/household`);
+    const res = await fetch(`${API_BASE_URL}/api/household`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Network response was not ok');
     return await res.json();
   } catch (error) {
@@ -13,7 +13,7 @@ export async function getHousehold() {
 
 export async function getChatHistory(limit = 50) {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/chat/history?limit=${limit}`);
+    const res = await fetch(`${API_BASE_URL}/api/chat/history?limit=${limit}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Network response was not ok');
     return await res.json();
   } catch (error) {
@@ -68,7 +68,7 @@ export async function getMemberTimeline(memberId: number) {
 
 export async function getInsights() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/ai/insights`);
+    const res = await fetch(`${API_BASE_URL}/api/ai/insights`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Insights fetch failed');
     return await res.json() as { insights: import('./types').InsightItem[]; risk_bands: Record<string, import('./types').RiskBand> };
   } catch (error) {
@@ -79,7 +79,7 @@ export async function getInsights() {
 
 export async function getBriefing() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/voice/briefing`);
+    const res = await fetch(`${API_BASE_URL}/api/voice/briefing`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Briefing fetch failed');
     return await res.json();
   } catch (error) {

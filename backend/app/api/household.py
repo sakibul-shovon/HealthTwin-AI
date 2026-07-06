@@ -8,7 +8,7 @@ router = APIRouter()
 # Guest mode household ID
 GUEST_HOUSEHOLD_ID = 1
 
-@router.get("/", response_model=schemas.HouseholdSchema)
+@router.get("", response_model=schemas.HouseholdSchema)
 def read_household(db: Session = Depends(get_db)):
     # Find the Rahman family
     from app.graph.models import Household
