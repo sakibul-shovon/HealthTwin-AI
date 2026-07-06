@@ -8,6 +8,15 @@ const nextConfig = {
       },
     ];
   },
+  webpack: (config) => {
+    // Prevent server-side ONNX runtime from bundling into browser bundle
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "onnxruntime-node$": false,
+      "sharp$": false,
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

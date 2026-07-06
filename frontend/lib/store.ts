@@ -19,6 +19,7 @@ interface TwinState {
   messages: ChatMessage[];
   emergencyActive: boolean;
   emergencyData: ResponseEnvelope | null;
+  voiceEnabled: boolean;
   setHousehold: (household: Household) => void;
   setActiveMember: (member: string | null) => void;
   setOrbState: (state: TwinState["orbState"]) => void;
@@ -30,7 +31,13 @@ interface TwinState {
   setMessages: (messages: ChatMessage[]) => void;
   clearMessages: () => void;
   setEmergency: (active: boolean, data?: ResponseEnvelope | null) => void;
+  toggleVoice: () => void;
 }
+
+const readVoicePref = () => {
+  if (typeof window === "undefined") return true;
+  return localStorage.getItem("ht-voice") !== "off";
+};
 
 export const useTwinStore = create<TwinState>((set) => ({
   household: null,
@@ -42,6 +49,7 @@ export const useTwinStore = create<TwinState>((set) => ({
   messages: [],
   emergencyActive: false,
   emergencyData: null,
+  voiceEnabled: readVoicePref(),
   setHousehold: (household) => set({ household }),
   setActiveMember: (activeMember) => set({ activeMember }),
   setOrbState: (orbState) => set({ orbState }),
@@ -54,4 +62,10 @@ export const useTwinStore = create<TwinState>((set) => ({
   setMessages: (messages) => set({ messages }),
   clearMessages: () => set({ messages: [] }),
   setEmergency: (active, data = null) => set({ emergencyActive: active, emergencyData: data }),
+  toggleVoice: () =>
+    set((s) => {
+      const next = !s.voiceEnabled;
+      if (typeof window !== "undefined") localStorage.setItem("ht-voice", next ? "on" : "off");
+      return { voiceEnabled: next };
+    }),
 }));

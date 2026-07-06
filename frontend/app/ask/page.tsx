@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import PageHeader from "@/components/shell/PageHeader";
 import { useTwinStore } from "@/lib/store";
 import { useHealthTwinCommand } from "@/hooks/useHealthTwinCommand";
@@ -10,7 +9,7 @@ import VerdictCard from "@/components/VerdictCard";
 import { postCareNotify, postVoiceConfirm, getHousehold } from "@/lib/api";
 
 export default function AskPage() {
-  const { messages, orbState, lastResponse, setOrbState, addNotification, setLastResponse, addMessage, setHousehold } = useTwinStore();
+  const { messages, orbState, lastResponse, voiceEnabled, setOrbState, addNotification, setLastResponse, addMessage, setHousehold } = useTwinStore();
   const { handleCommand, handleMicClick, isListening, isSTTSupported, speak } = useHealthTwinCommand();
   const isProcessing = orbState === "thinking" || orbState === "speaking";
 
@@ -43,10 +42,12 @@ export default function AskPage() {
           if (fresh) setHousehold(fresh);
         }
         
-        if (envelope.spoken) {
+        if (envelope.spoken && voiceEnabled) {
           const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? "en");
           if (utterance) utterance.onend = () => setOrbState("idle");
           else setTimeout(() => setOrbState("idle"), 2500);
+        } else {
+          setTimeout(() => setOrbState("idle"), 1500);
         }
       }
     }

@@ -13,6 +13,7 @@ export function useHealthTwinCommand() {
     addMessage,
     setEmergency,
     orbState,
+    voiceEnabled,
   } = useTwinStore();
   
   const router = useRouter();
@@ -33,9 +34,7 @@ export function useHealthTwinCommand() {
 
   const handleCommand = useCallback(
     async (inputTranscript: string, lang: "en" | "bn", redirect: boolean = true) => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
+      cancelSpeech();
       if (!inputTranscript.trim()) return;
 
       if (speakTimeoutRef.current) {
@@ -78,46 +77,42 @@ export function useHealthTwinCommand() {
           timestamp: Date.now(),
         });
 
-        const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? lang);
-        if (utterance) {
-          speakTimeoutRef.current = setTimeout(() => {
-            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
-              setOrbState("listening");
-              startListening(lang);
-            } else {
-              setOrbState("idle");
-            }
-          }, 8000);
+        const afterSpeak = () => {
+          if (envelope.verdict === "CLARIFY" && isSTTSupported) {
+            setOrbState("listening");
+            startListening(lang);
+          } else {
+            setOrbState("idle");
+          }
+        };
 
-          utterance.onend = () => {
-            if (speakTimeoutRef.current) {
-              clearTimeout(speakTimeoutRef.current);
-              speakTimeoutRef.current = null;
-            }
-            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
-              setOrbState("listening");
-              startListening(lang);
-            } else {
-              setOrbState("idle");
-            }
-          };
-        } else {
+        if (!voiceEnabled) {
+          // Voice is muted — skip TTS, return to idle after a beat
           const wordCount = envelope.spoken.split(" ").length;
-          setTimeout(() => {
-            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
-              setOrbState("listening");
-              startListening(lang);
-            } else {
-              setOrbState("idle");
-            }
-          }, Math.max(2500, wordCount * 350));
+          setTimeout(afterSpeak, Math.max(1500, wordCount * 200));
+        } else {
+          const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? lang);
+          if (utterance) {
+            // Safety timeout so orb never gets stuck in "speaking"
+            speakTimeoutRef.current = setTimeout(afterSpeak, 30_000);
+            utterance.onend = () => {
+              if (speakTimeoutRef.current) {
+                clearTimeout(speakTimeoutRef.current);
+                speakTimeoutRef.current = null;
+              }
+              afterSpeak();
+            };
+          } else {
+            const wordCount = envelope.spoken.split(" ").length;
+            setTimeout(afterSpeak, Math.max(2500, wordCount * 350));
+          }
         }
       } else {
         setOrbState("error");
         setTimeout(() => setOrbState("idle"), 2000);
       }
     },
-    [setOrbState, setLastResponse, setTranscript, addMessage, router, speak, isSTTSupported, startListening, setEmergency]
+    [setOrbState, setLastResponse, setTranscript, addMessage, router, speak, cancelSpeech, voiceEnabled, isSTTSupported, startListening, setEmergency]
   );
 
   function handleOrbClick() {
