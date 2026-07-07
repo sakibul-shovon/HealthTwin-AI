@@ -21,7 +21,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            cd ~/healthtwin-ai || (git clone git@github.com:${{ github.repository }}.git ~/healthtwin-ai && cd ~/healthtwin-ai)
+            cd ~/healthtwin-ai || (git clone https://github.com/${{ github.repository }}.git ~/healthtwin-ai && cd ~/healthtwin-ai)
             git config --global --add safe.directory ~/healthtwin-ai
             git pull origin main
             
