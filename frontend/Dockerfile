@@ -9,6 +9,7 @@ COPY . .
 # Build-time arg so Next.js rewrites point to the backend container
 ARG BACKEND_URL=http://backend:8000
 ENV BACKEND_URL=$BACKEND_URL
+ENV DOCKER_BUILD=1
 
 RUN npm run build
 
