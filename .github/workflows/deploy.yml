@@ -28,7 +28,8 @@ jobs:
             cd ~/healthtwin-ai || (git clone https://oauth2:$GITHUB_TOKEN@github.com/${{ github.repository }}.git ~/healthtwin-ai && cd ~/healthtwin-ai)
             git config --global --add safe.directory ~/healthtwin-ai
             git remote set-url origin https://oauth2:$GITHUB_TOKEN@github.com/${{ github.repository }}.git
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             
             # Export the Groq key to a local .env for docker-compose to use
             echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" > .env
