@@ -28,7 +28,7 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/healthtwin
       GROQ_API_KEY: ${GROQ_API_KEY}
       # Update ALLOWED_ORIGINS to include your VPS IP or Domain name
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-'["*"]'}
+      ALLOWED_ORIGINS: '["*"]'
       DEBUG: "false"
     depends_on:
       db:
