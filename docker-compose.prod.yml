@@ -23,7 +23,7 @@ services:
     build: ./backend
     restart: always
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/healthtwin
       GROQ_API_KEY: ${GROQ_API_KEY}
