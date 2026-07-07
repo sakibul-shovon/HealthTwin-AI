@@ -1,756 +1,413 @@
 "use client";
 
-import { useEffect, useCallback, useRef, useState } from "react";
-import { getHousehold, post, postVoiceConfirm, postCareNotify, getChatHistory, clearChatHistory, getBriefing, getInsights } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTwinStore } from "@/lib/store";
-import { ResponseEnvelope, InsightItem, RiskBand } from "@/lib/types";
-import { useVoice } from "@/hooks/useVoice";
-import MemberRail from "@/components/MemberRail";
-import Constellation from "@/components/Constellation";
-import VoiceOrb from "@/components/VoiceOrb";
-import EmergencyMode from "@/components/EmergencyMode";
-import MemberTwin from "@/components/MemberTwin";
-import VoicePanel from "@/components/VoicePanel";
-import ChatPanel from "@/components/ChatPanel";
-import UploadDropzone, { UploadDropzoneRef } from "@/components/UploadDropzone";
-import FamilyManager from "@/components/FamilyManager";
-import CommandPalette from "@/components/CommandPalette";
-import InsightFeed from "@/components/InsightFeed";
+import { loginUser, registerUser } from "@/lib/api";
+import { Shield, Activity, Users, Brain, Lock, ChevronRight, Eye, EyeOff, Sparkles } from "lucide-react";
 
-export default function Home() {
-  const {
-    household,
-    activeMember,
-    orbState,
-    lastResponse,
-    transcript,
-    notifications,
-    messages,
-    setHousehold,
-    setActiveMember,
-    setOrbState,
-    setLastResponse,
-    setTranscript,
-    addNotification,
-    dismissNotification,
-    addMessage,
-    setMessages,
-    clearMessages,
-    setEmergency,
-  } = useTwinStore();
+const FEATURES = [
+  { icon: Shield,   title: "3-Gate Safety Engine",   desc: "Interaction, contraindication & allergy checks on every medication" },
+  { icon: Brain,    title: "AI Voice Assistant",      desc: "Ask in English or Bengali — she remembers your whole family" },
+  { icon: Activity, title: "Live Risk Monitoring",    desc: "Real-time health risk scoring with proactive alerts" },
+  { icon: Users,    title: "Multi-Member Families",   desc: "Each member has their own digital health twin" },
+];
 
-  const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dropzoneRef = useRef<UploadDropzoneRef>(null);
-  const isProcessing = orbState === "thinking" || orbState === "speaking";
+const STATS = [
+  { value: "3-Gate", label: "Safety Verification" },
+  { value: "20+",    label: "Drug Interactions" },
+  { value: "EN/BN",  label: "Bilingual" },
+  { value: "100%",   label: "Private & Secure" },
+];
 
-  const [isManagerOpen, setManagerOpen] = useState(false);
-  const [managerMemberId, setManagerMemberId] = useState<number | null>(null);
-  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
-  const [insights, setInsights] = useState<InsightItem[]>([]);
-  const [riskBands, setRiskBands] = useState<Record<string, RiskBand>>({});
-  const [rightTab, setRightTab] = useState<"insights" | "chat">("insights");
-
-  const handleOpenManager = (id?: number) => {
-    setManagerMemberId(id || null);
-    setManagerOpen(true);
-  };
-
-  // ── Load household, chat history, and daily briefing on mount ────────────
-  useEffect(() => {
-    const init = async () => {
-      const [data, history, briefing, insightData] = await Promise.all([
-        getHousehold(),
-        getChatHistory() as Promise<{ id: number | string; role: string; text: string; envelope: ResponseEnvelope; created_at: string }[]>,
-        getBriefing(),
-        getInsights(),
-      ]);
-
-      if (insightData) {
-        setInsights(insightData.insights ?? []);
-        setRiskBands(insightData.risk_bands ?? {});
-        // Auto-switch to chat if no meaningful insights
-        if ((insightData.insights ?? []).filter((i: InsightItem) => i.severity !== "LOW").length === 0) {
-          setRightTab("chat");
-        }
-      }
-
-      if (data) setHousehold(data);
-
-      const all = [];
-
-      // Briefing always leads — timestamped before any history
-      if (briefing) {
-        all.push({
-          id: `briefing-${Date.now()}`,
-          role: "assistant" as const,
-          text: briefing.spoken,
-          envelope: briefing as ResponseEnvelope,
-          timestamp: Date.now() - 1_000_000,
-        });
-      }
-
-      if (history && history.length > 0) {
-        all.push(
-          ...history.map((msg) => ({
-            id: `db-${msg.id}`,
-            role: msg.role as "user" | "assistant",
-            text: msg.text,
-            envelope: msg.envelope,
-            timestamp: new Date(msg.created_at).getTime(),
-          }))
-        );
-      }
-
-      if (all.length > 0) setMessages(all);
-    };
-
-    init();
-  }, [setHousehold, setMessages]);
-
-  // ── Core command handler ──────────────────────────────────────────────────
-  const handleCommand = useCallback(
-    async (inputTranscript: string, lang: "en" | "bn") => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-      if (!inputTranscript.trim()) return;
-
-      if (speakTimeoutRef.current) {
-        clearTimeout(speakTimeoutRef.current);
-        speakTimeoutRef.current = null;
-      }
-
-      setTranscript(inputTranscript);
-      setOrbState("thinking");
-
-      addMessage({
-        id: `u-${Date.now()}`,
-        role: "user",
-        text: inputTranscript,
-        timestamp: Date.now(),
-      });
-
-      const data = await post("/api/voice/command", {
-        transcript: inputTranscript,
-        language: lang,
-      });
-
-      if (data) {
-        const envelope = data as ResponseEnvelope;
-        if (envelope.verdict === "EMERGENCY") {
-          setEmergency(true, envelope);
-        }
-        setLastResponse(envelope);
-        setOrbState("speaking");
-
-        addMessage({
-          id: `a-${Date.now()}`,
-          role: "assistant",
-          text: envelope.spoken,
-          envelope,
-          timestamp: Date.now(),
-        });
-
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? lang);
-        if (utterance) {
-          speakTimeoutRef.current = setTimeout(() => {
-            // eslint-disable-next-line @typescript-eslint/no-use-before-define
-            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
-              setOrbState("listening");
-              // eslint-disable-next-line @typescript-eslint/no-use-before-define
-              startListening(lang);
-            } else {
-              setOrbState("idle");
-            }
-          }, 8000);
-
-          utterance.onend = () => {
-            if (speakTimeoutRef.current) {
-              clearTimeout(speakTimeoutRef.current);
-              speakTimeoutRef.current = null;
-            }
-            // eslint-disable-next-line @typescript-eslint/no-use-before-define
-            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
-              setOrbState("listening");
-              // eslint-disable-next-line @typescript-eslint/no-use-before-define
-              startListening(lang);
-            } else {
-              setOrbState("idle");
-            }
-          };
-        } else {
-          const wordCount = envelope.spoken.split(" ").length;
-          setTimeout(() => {
-            // eslint-disable-next-line @typescript-eslint/no-use-before-define
-            if (envelope.verdict === "CLARIFY" && isSTTSupported) {
-              setOrbState("listening");
-              // eslint-disable-next-line @typescript-eslint/no-use-before-define
-              startListening(lang);
-            } else {
-              setOrbState("idle");
-            }
-          }, Math.max(2500, wordCount * 350));
-        }
-      } else {
-        setOrbState("error");
-        setTimeout(() => setOrbState("idle"), 2000);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [setOrbState, setLastResponse, setTranscript, addMessage]
+// ── Subtle warm background blobs ──────────────────────────────────────────────
+function WarmBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <motion.div className="absolute rounded-full"
+        style={{ width: 500, height: 500, top: -120, left: -80,
+          background: "radial-gradient(circle, rgba(15,76,85,0.07) 0%, transparent 70%)" }}
+        animate={{ scale: [1, 1.08, 1], opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div className="absolute rounded-full"
+        style={{ width: 350, height: 350, bottom: -60, left: 100,
+          background: "radial-gradient(circle, rgba(226,146,47,0.08) 0%, transparent 70%)" }}
+        animate={{ scale: [1, 1.12, 1], opacity: [0.4, 0.8, 0.4] }}
+        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+      />
+      <motion.div className="absolute rounded-full"
+        style={{ width: 250, height: 250, top: "45%", left: "35%",
+          background: "radial-gradient(circle, rgba(15,76,85,0.05) 0%, transparent 70%)" }}
+        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+      />
+    </div>
   );
+}
 
-  // ── Voice hook ────────────────────────────────────────────────────────────
-  const { isListening, isSTTSupported, startListening, stopListening, speak, cancelSpeech } =
-    useVoice({
-      onTranscript: handleCommand,
-      onError: () => {
-        setOrbState("error");
-        setTimeout(() => setOrbState("idle"), 2000);
-      },
-      onListeningEnd: () => {
-        if (useTwinStore.getState().orbState === "listening") setOrbState("idle");
-      },
-    });
+// ── Samantha orb in app color scheme ─────────────────────────────────────────
+function SamanthaOrb() {
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 100, height: 100 }}>
+      {[1, 2, 3].map(i => (
+        <motion.div key={i} className="absolute rounded-full border"
+          style={{
+            width: 100 + i * 26, height: 100 + i * 26,
+            borderColor: `rgba(15,76,85,${0.12 - i * 0.03})`,
+          }}
+          animate={{ scale: [1, 1.05, 1], opacity: [0.5, 0.9, 0.5] }}
+          transition={{ duration: 3, repeat: Infinity, delay: i * 0.4 }}
+        />
+      ))}
+      <motion.div
+        className="relative z-10 w-24 h-24 rounded-3xl flex items-center justify-center text-white font-black text-4xl select-none"
+        style={{
+          background: "linear-gradient(135deg, #0F4C55 0%, #1a6b78 50%, #E2922F 100%)",
+          backgroundSize: "200% 200%",
+          boxShadow: "0 0 32px rgba(15,76,85,0.25), 0 0 64px rgba(226,146,47,0.12)",
+        }}
+        animate={{
+          backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
+          boxShadow: [
+            "0 0 32px rgba(15,76,85,0.25), 0 0 64px rgba(226,146,47,0.12)",
+            "0 0 48px rgba(15,76,85,0.4), 0 0 96px rgba(226,146,47,0.2)",
+            "0 0 32px rgba(15,76,85,0.25), 0 0 64px rgba(226,146,47,0.12)",
+          ],
+        }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        S
+      </motion.div>
+    </div>
+  );
+}
 
-  // ── Orb click ─────────────────────────────────────────────────────────────
-  function handleOrbClick() {
-    cancelSpeech();
-    if (speakTimeoutRef.current) {
-      clearTimeout(speakTimeoutRef.current);
-      speakTimeoutRef.current = null;
-    }
-    if (orbState === "listening") {
-      stopListening();
-      setOrbState("idle");
-    } else {
-      setOrbState("listening");
-      startListening("en");
-    }
+// ── Auth form ─────────────────────────────────────────────────────────────────
+type AuthMode = "login" | "register";
+
+function AuthForm() {
+  const router = useRouter();
+  const { setAuth } = useTwinStore();
+
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [familyName, setFamilyName] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  function fillDemo() {
+    setMode("login");
+    setEmail("demo@healthtwin.ai");
+    setPassword("Demo1234!");
+    setError("");
   }
 
-  function handleMicClick(lang: "en" | "bn") {
-    cancelSpeech();
-    if (speakTimeoutRef.current) {
-      clearTimeout(speakTimeoutRef.current);
-      speakTimeoutRef.current = null;
-    }
-    if (orbState === "listening") {
-      stopListening();
-      setOrbState("idle");
-    } else {
-      setOrbState("listening");
-      startListening(lang);
-    }
-  }
-
-  // ── Action handler ────────────────────────────────────────────────────────
-  async function handleAction(action: {
-    type: string;
-    label: string;
-    target: string | null;
-    pending_id?: string;
-  }) {
-    if (action.type === "notify_caregiver" && action.target) {
-      const result = await postCareNotify(action.target, "Safety alert from HealthTwin");
-      if (result?.notification) {
-        addNotification(result.notification);
-        const msg = `Notifying ${action.target}.`;
-        setOrbState("speaking");
-        speak(msg, "en");
-        setTimeout(() => setOrbState("idle"), 2500);
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      let result;
+      if (mode === "login") {
+        result = await loginUser(email, password);
       } else {
-        setOrbState("error");
-        setTimeout(() => setOrbState("idle"), 2000);
+        if (!familyName.trim()) { setError("Family name is required"); setLoading(false); return; }
+        result = await registerUser(email, password, familyName);
       }
-    }
-    if (action.pending_id) {
-      const result = await postVoiceConfirm(action.pending_id, true);
-      if (result) {
-        const envelope = result as ResponseEnvelope;
-        setLastResponse(envelope);
-
-        addMessage({
-          id: `a-${Date.now()}`,
-          role: "assistant",
-          text: envelope.spoken,
-          envelope,
-          timestamp: Date.now(),
-        });
-
-        if (envelope.household_refresh) {
-          const fresh = await getHousehold();
-          if (fresh) setHousehold(fresh);
-        }
-
-        // Proactive radar alert — surface if medication write triggered an interaction
-        if (envelope.radar_alert && ["UNSAFE", "CAUTION"].includes(envelope.radar_alert.verdict)) {
-          const ra = envelope.radar_alert;
-          const radarEnvelope: ResponseEnvelope = {
-            verdict: ra.verdict as ResponseEnvelope["verdict"],
-            spoken: `Safety Radar: ${ra.conflict ?? ra.detail}`,
-            display: {
-              title: "Safety Radar Alert",
-              conflict: ra.conflict,
-              alternative: null,
-              detail: ra.detail,
-              member: null,
-              interpreted: "proactive safety check after medication add",
-            },
-            evidence: { source: ra.source, confidence: "HIGH", grounding_score: 1.0 },
-            actions: [],
-            member_focus: null,
-            language: "en",
-            gate1_trace: ra.gate1_trace,
-          };
-          setTimeout(() => {
-            addMessage({
-              id: `radar-${Date.now()}`,
-              role: "assistant",
-              text: radarEnvelope.spoken,
-              envelope: radarEnvelope,
-              timestamp: Date.now() + 1,
-            });
-            setLastResponse(radarEnvelope);
-            const u = speak(radarEnvelope.spoken, "en");
-            if (u) u.onend = () => setOrbState("idle");
-            else setTimeout(() => setOrbState("idle"), 2500);
-          }, 1200);
-        } else if (envelope.spoken) {
-          const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? "en");
-          if (utterance) utterance.onend = () => setOrbState("idle");
-          else setTimeout(() => setOrbState("idle"), 2500);
-        }
-      }
+      setAuth({
+        user_id: result.user_id,
+        email: result.email,
+        household_id: result.household_id,
+        family_name: result.family_name,
+      }, result.token);
+      router.push("/home");
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
   }
 
-  const members = household?.members ?? [];
-  const activeMemberId = members.find((m) => m.role_label === activeMember)?.id;
-  const focusedMember = lastResponse?.member_focus ?? null;
-  const alertMembers = lastResponse?.display.members ?? [];
-
-  const handleUploadSuccess = async (summary: string) => {
-    const fresh = await getHousehold();
-    if (fresh) setHousehold(fresh);
-
-    addMessage({
-      id: `system-${Date.now()}`,
-      role: "assistant",
-      text: summary,
-      timestamp: Date.now(),
-      envelope: {
-        verdict: "CONFIRMED",
-        spoken: summary,
-        display: {
-          title: "Document Saved",
-          detail: summary,
-          conflict: null,
-          alternative: null,
-          member: activeMemberId
-            ? members.find((m) => m.id === activeMemberId)?.role_label ?? null
-            : null,
-          interpreted: "document upload",
-        },
-        evidence: { source: "System", confidence: "HIGH", grounding_score: null },
-        actions: [],
-        member_focus: null,
-        language: "en",
-      },
-    });
+  const inputStyle = {
+    background: "#F7F4ED",
+    border: "1.5px solid rgba(23,40,44,0.14)",
+    color: "#17282C",
+    outline: "none",
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--canvas)" }}>
-      <FamilyManager
-        isOpen={isManagerOpen}
-        onClose={() => setManagerOpen(false)}
-        initialMemberId={managerMemberId}
-      />
-      <EmergencyMode onAction={handleAction} />
-
-      {/* ── Mobile bottom sheet ──────────────────────────────────────────── */}
-      {mobilePanelOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end"
-          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-          onClick={() => setMobilePanelOpen(false)}
-        >
-          <div
-            className="rounded-t-3xl overflow-hidden flex flex-col"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              maxHeight: "82vh",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="flex items-center justify-between px-5 py-3.5 shrink-0"
-              style={{ borderBottom: "1px solid var(--border)" }}
-            >
-              <p className="text-sm font-bold" style={{ color: "var(--ink)" }}>
-                {activeMemberId ? "Member Twin" : "Verdict & Conversation"}
-              </p>
-              <button
-                onClick={() => setMobilePanelOpen(false)}
-                className="text-xs px-2.5 py-1 rounded-lg"
-                style={{ background: "var(--surface-sunk)", color: "var(--ink-soft)" }}
-                aria-label="Close panel"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1">
-              {activeMemberId ? (
-                <MemberTwin
-                  memberId={activeMemberId}
-                  onBack={() => setActiveMember(null)}
-                  onEdit={handleOpenManager}
-                />
-              ) : (
-                <div className="h-[60vh]">
-                  <ChatPanel
-                    messages={messages}
-                    isThinking={orbState === "thinking"}
-                    onExampleClick={(t) => { handleCommand(t, "en"); setMobilePanelOpen(false); }}
-                    onAction={handleAction}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header
-        className="flex items-center justify-between px-5 py-3 shrink-0 z-20"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      className="w-full"
+    >
+      {/* Demo button */}
+      <motion.button
+        onClick={fillDemo}
+        whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+        className="w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all"
         style={{
-          background: "var(--glass)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderBottom: "1px solid var(--border)",
+          background: "linear-gradient(135deg, rgba(226,146,47,0.1), rgba(226,146,47,0.06))",
+          border: "1.5px solid rgba(226,146,47,0.35)",
+          color: "#B96D19",
         }}
       >
-        {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs"
-            style={{
-              background: "linear-gradient(135deg, var(--primary), var(--accent))",
-              color: "#fff",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            HT
-          </div>
-          <div>
-            <h1
-              className="text-sm font-bold leading-tight tracking-tight"
-              style={{ color: "var(--ink)" }}
-            >
-              HealthTwin
-            </h1>
-            <p className="text-[10px] font-medium" style={{ color: "var(--ink-soft)" }}>
-              Living family health twin
-            </p>
-          </div>
-        </div>
+        <Sparkles size={14} style={{ color: "#E2922F" }} />
+        <span className="flex-1 text-left" style={{ color: "#A86900" }}>Try the hackathon demo</span>
+        <span className="text-[10px] font-normal" style={{ color: "#B96D19", opacity: 0.75 }}>demo@healthtwin.ai · Demo1234!</span>
+        <ChevronRight size={13} style={{ color: "#B96D19", opacity: 0.6 }} />
+      </motion.button>
 
-        {/* Status chips */}
-        <div className="flex items-center gap-2">
-          {isSTTSupported ? (
-            <span
-              className="text-[10px] font-medium px-2.5 py-1 rounded-full"
-              style={{ background: "var(--well-bg)", color: "var(--well)" }}
-            >
-              Voice ready
-            </span>
-          ) : (
-            <span
-              className="text-[10px] font-medium px-2.5 py-1 rounded-full"
-              style={{ background: "var(--watch-bg)", color: "var(--watch)" }}
-            >
-              Text-only
-            </span>
-          )}
-          {household && (
-            <span
-              className="text-[10px] font-medium px-2.5 py-1 rounded-full hidden sm:block"
-              style={{ background: "var(--glass-bright)", border: "1px solid var(--border)", color: "var(--ink-soft)" }}
-            >
-              {household.name}
-            </span>
-          )}
-        </div>
-
-        {/* Right controls */}
-        <div className="flex items-center gap-2">
-          <CommandPalette
-            members={members}
-            onCommand={(t) => handleCommand(t, "en")}
-            onSelectMember={setActiveMember}
-            onScan={() => dropzoneRef.current?.openFileDialog()}
-          />
-          <button
-            onClick={() => setMobilePanelOpen((v) => !v)}
-            className="lg:hidden text-[10px] font-medium px-2.5 py-1 rounded-full transition-all"
-            style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
-            aria-label="Toggle family twin panel"
-            aria-expanded={mobilePanelOpen}
-          >
-            {mobilePanelOpen ? "✕ Close" : "Twin"}
-          </button>
-          {messages.length > 0 && (
+      {/* Card */}
+      <div className="rounded-3xl overflow-hidden"
+        style={{
+          background: "#FFFFFF",
+          border: "1.5px solid rgba(23,40,44,0.10)",
+          boxShadow: "0 12px 48px rgba(16,38,42,0.10), 0 2px 8px rgba(16,38,42,0.06)",
+        }}
+      >
+        {/* Tab toggle */}
+        <div className="flex" style={{ borderBottom: "1.5px solid rgba(23,40,44,0.08)" }}>
+          {(["login", "register"] as AuthMode[]).map(m => (
             <button
-              onClick={() => { clearChatHistory(); clearMessages(); }}
-              className="text-[10px] font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-70"
-              style={{ background: "var(--glass-bright)", border: "1px solid var(--border)", color: "var(--ink-soft)" }}
-              aria-label="Clear chat history"
+              key={m}
+              onClick={() => { setMode(m); setError(""); }}
+              className="flex-1 py-4 text-sm font-semibold transition-all relative"
+              style={{ color: mode === m ? "#0F4C55" : "#8A9696" }}
             >
-              Clear
+              {m === "login" ? "Sign In" : "Create Account"}
+              {mode === m && (
+                <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5"
+                  style={{ background: "linear-gradient(90deg, transparent, #0F4C55, transparent)" }} />
+              )}
             </button>
-          )}
-        </div>
-      </header>
-
-      {/* ── Toast notifications ──────────────────────────────────────────── */}
-      {notifications.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-xs">
-          {notifications.map((n) => (
-            <div
-              key={n.id}
-              className="flex items-start gap-2 rounded-2xl px-4 py-3 shadow-2xl glass-bright"
-              style={{ border: "1px solid var(--primary)33" }}
-            >
-              <span className="text-xs mt-0.5">🔔</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold" style={{ color: "var(--ink)" }}>
-                  → {n.target}
-                </p>
-                <p className="text-[11px] truncate" style={{ color: "var(--ink-soft)" }}>
-                  {n.message}
-                </p>
-              </div>
-              <button
-                onClick={() => dismissNotification(n.id)}
-                className="text-[11px] shrink-0 hover:opacity-70"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                ✕
-              </button>
-            </div>
           ))}
         </div>
-      )}
 
-      {/* ── Body: 3-column layout ────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-
-        {/* Left: icon-only member rail (72px) */}
-        <div
-          className="hidden md:flex md:flex-col overflow-y-auto overflow-x-visible shrink-0"
-          style={{
-            width: 72,
-            background: "var(--surface)",
-          }}
-        >
-          {members.length > 0 ? (
-            <MemberRail
-              members={members}
-              activeMember={activeMember}
-              onSelect={setActiveMember}
-              onOpenManager={handleOpenManager}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="w-8 h-8 rounded-full animate-pulse" style={{ background: "var(--surface-sunk)" }} />
-            </div>
-          )}
-        </div>
-
-        {/* Center: the Living Twin hero + voice input */}
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <UploadDropzone ref={dropzoneRef} onUploadSuccess={handleUploadSuccess}>
-            <div className="relative flex-1 flex flex-col items-center justify-center overflow-hidden dot-grid">
-              {/* warm radial wash behind the twin */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    "radial-gradient(ellipse 55% 45% at 50% 46%, rgba(226,146,47,0.08) 0%, transparent 70%)",
-                }}
-              />
-
-              {members.length > 0 ? (
-                <Constellation
-                  hero
-                  members={members}
-                  focusedMember={focusedMember}
-                  activeMember={activeMember}
-                  alertMembers={alertMembers}
-                  verdict={lastResponse?.verdict ?? null}
-                  riskBands={riskBands}
-                  onSelect={setActiveMember}
-                  centerSlot={<VoiceOrb size="full" onClick={handleOrbClick} />}
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+          <AnimatePresence>
+            {mode === "register" && (
+              <motion.div key="family"
+                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "#58686B" }}>
+                  FAMILY NAME
+                </label>
+                <input
+                  type="text" value={familyName} onChange={e => setFamilyName(e.target.value)}
+                  placeholder="e.g. Rahman Family"
+                  className="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                  style={inputStyle}
+                  required
                 />
-              ) : (
-                <VoiceOrb size="full" onClick={handleOrbClick} />
-              )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-              {/* Status + transcript line */}
-              <div
-                className="relative z-10 mt-1 flex flex-col items-center gap-1.5 px-6 text-center max-w-md"
-                aria-live="polite"
-              >
-                <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
-                  {orbState === "listening" && "Listening…"}
-                  {orbState === "thinking" && "Thinking…"}
-                  {orbState === "speaking" && "Speaking…"}
-                  {orbState === "error" && "Didn't catch that — try again"}
-                  {orbState === "idle" && (isListening ? "Listening…" : "Ask about any family member")}
-                </p>
-                {transcript && (
-                  <p className="text-xs italic" style={{ color: "var(--ink-soft)" }}>
-                    &ldquo;{transcript}&rdquo;
-                  </p>
-                )}
-                {focusedMember && (
-                  <span
-                    className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                    style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
-                  >
-                    Focus: {focusedMember}
-                  </span>
-                )}
-              </div>
-            </div>
-          </UploadDropzone>
-
-          {/* Voice input panel */}
-          <div className="shrink-0 px-5 pb-5 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-            <VoicePanel
-              onSubmit={handleCommand}
-              isListening={isListening}
-              isSTTSupported={isSTTSupported}
-              onMicClick={handleMicClick}
-              onAttachClick={() => dropzoneRef.current?.openFileDialog()}
-              onScanClick={() => dropzoneRef.current?.openFileDialog()}
-              disabled={isProcessing}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#58686B" }}>EMAIL</label>
+            <input
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="w-full px-4 py-3 rounded-xl text-sm"
+              style={inputStyle}
+              required
             />
           </div>
+
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#58686B" }}>PASSWORD</label>
+            <div className="relative">
+              <input
+                type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 pr-11 rounded-xl text-sm"
+                style={inputStyle}
+                required minLength={6}
+              />
+              <button type="button" onClick={() => setShowPw(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-70 transition-opacity">
+                {showPw ? <EyeOff size={15} color="#17282C" /> : <Eye size={15} color="#17282C" />}
+              </button>
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {error && (
+              <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="text-xs px-3 py-2 rounded-xl"
+                style={{ background: "rgba(191,51,72,0.08)", color: "#BF3348", border: "1px solid rgba(191,51,72,0.2)" }}>
+                {error}
+              </motion.p>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            type="submit" disabled={loading}
+            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+            className="w-full py-3.5 rounded-xl font-bold text-sm text-white disabled:opacity-60 mt-1 flex items-center justify-center gap-2"
+            style={{
+              background: "linear-gradient(135deg, #0F4C55, #1a6b78)",
+              boxShadow: "0 4px 16px rgba(15,76,85,0.25)",
+            }}
+          >
+            {loading ? (
+              <motion.div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} />
+            ) : mode === "login" ? "Sign In to Samantha" : "Create Account"}
+          </motion.button>
+        </form>
+      </div>
+
+      <p className="text-center text-[11px] mt-4" style={{ color: "rgba(23,40,44,0.3)" }}>
+        Your data stays private. No data sold. Ever.
+      </p>
+    </motion.div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function LandingPage() {
+  const { authToken } = useTwinStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authToken) router.replace("/home");
+  }, [authToken, router]);
+
+  return (
+    <div className="min-h-screen grid lg:grid-cols-2" style={{ background: "#F7F4ED" }}>
+
+      {/* ── LEFT — Product showcase ─────────────────────────────────────────── */}
+      <div className="relative hidden lg:flex flex-col px-14 py-10 overflow-hidden"
+        style={{ background: "#F7F4ED" }}>
+        <WarmBackground />
+
+        {/* Logo */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 flex items-center gap-3 mb-10">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-white text-sm"
+            style={{ background: "linear-gradient(135deg, #0F4C55, #1a6b78)" }}>S</div>
+          <span className="font-bold text-base tracking-tight" style={{ color: "#17282C" }}>HealthTwin AI</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: "rgba(15,76,85,0.1)", color: "#0F4C55", border: "1px solid rgba(15,76,85,0.2)" }}>
+            BETA
+          </span>
+        </motion.div>
+
+        {/* Hero content — vertically centered */}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-7">
+          <SamanthaOrb />
+
+          <div className="text-center max-w-md">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="text-5xl font-black leading-tight mb-3"
+              style={{ color: "#17282C", letterSpacing: "-0.02em" }}
+            >
+              Meet{" "}
+              <span className="bg-clip-text text-transparent"
+                style={{ backgroundImage: "linear-gradient(90deg, #0F4C55, #E2922F)" }}>
+                Samantha
+              </span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+              className="text-sm leading-relaxed" style={{ color: "#58686B" }}
+            >
+              Your AI-powered family health guardian. She remembers every medication,
+              catches dangerous interactions, and answers health questions in English or Bengali — instantly.
+            </motion.p>
+          </div>
+
+          {/* Stats row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+            className="flex gap-8"
+          >
+            {STATS.map((s, i) => (
+              <div key={i} className="text-center">
+                <div className="text-lg font-black" style={{ color: "#0F4C55" }}>{s.value}</div>
+                <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#8A9696" }}>{s.label}</div>
+              </div>
+            ))}
+
+          </motion.div>
+
+          {/* Feature cards 2×2 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+            className="grid grid-cols-2 gap-3 w-full max-w-md"
+          >
+            {FEATURES.map((f, i) => (
+              <motion.div key={i}
+                whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(15,76,85,0.10)" }}
+                className="flex gap-3 p-3.5 rounded-2xl cursor-default transition-all"
+                style={{
+                  background: "#FFFCF7",
+                  border: "1.5px solid rgba(23,40,44,0.08)",
+                  boxShadow: "0 2px 8px rgba(16,38,42,0.05)",
+                }}
+              >
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(15,76,85,0.08)" }}>
+                  <f.icon size={14} color="#0F4C55" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold leading-snug" style={{ color: "#17282C" }}>{f.title}</p>
+                  <p className="text-[10px] leading-relaxed mt-0.5" style={{ color: "#8A9696" }}>{f.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
 
-        {/* Right: conversation or member twin */}
-        <div
-          className="hidden lg:flex flex-col w-[420px] shrink-0 overflow-hidden"
-          style={{
-            borderLeft: "1px solid var(--border)",
-            background: "var(--surface)",
-          }}
-        >
-          {activeMemberId ? (
-            <MemberTwin
-              memberId={activeMemberId}
-              onBack={() => setActiveMember(null)}
-              onEdit={handleOpenManager}
-            />
-          ) : (
-            <div className="flex flex-col h-full overflow-hidden">
-              {/* Tabs */}
-              <div
-                className="shrink-0 flex items-center gap-0.5 px-3 pt-2 pb-0"
-                style={{ borderBottom: "1px solid var(--border)" }}
-              >
-                {/* AI Insights tab */}
-                <button
-                  onClick={() => setRightTab("insights")}
-                  className="relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-t-xl transition-all"
-                  style={{
-                    background: rightTab === "insights" ? "var(--canvas)" : "transparent",
-                    color: rightTab === "insights" ? "var(--primary)" : "var(--ink-faint)",
-                    borderBottom: rightTab === "insights" ? "2px solid var(--primary)" : "2px solid transparent",
-                  }}
-                >
-                  <span>AI Insights</span>
-                  {insights.filter(i => i.severity === "HIGH").length > 0 && (
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: "var(--urgent)" }} />
-                      <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: "var(--urgent)" }} />
-                    </span>
-                  )}
-                  {insights.length > 0 && (
-                    <span
-                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
-                    >
-                      {insights.length}
-                    </span>
-                  )}
-                </button>
+        {/* Footer badge */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
+          className="relative z-10 flex items-center gap-2 mt-6">
+          <Lock size={10} style={{ color: "rgba(23,40,44,0.3)" }} />
+          <span className="text-[10px]" style={{ color: "rgba(23,40,44,0.35)" }}>
+            Built for Bangladeshi families · All data encrypted · Zero third-party sharing
+          </span>
+        </motion.div>
+      </div>
 
-                {/* Conversation tab */}
-                <button
-                  onClick={() => setRightTab("chat")}
-                  className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold rounded-t-xl transition-all"
-                  style={{
-                    background: rightTab === "chat" ? "var(--canvas)" : "transparent",
-                    color: rightTab === "chat" ? "var(--primary)" : "var(--ink-faint)",
-                    borderBottom: rightTab === "chat" ? "2px solid var(--primary)" : "2px solid transparent",
-                  }}
-                >
-                  Chat
-                  {messages.length > 0 && (
-                    <span
-                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: "var(--surface-sunk)", color: "var(--ink-soft)" }}
-                    >
-                      {messages.length}
-                    </span>
-                  )}
-                </button>
+      {/* ── RIGHT — Auth panel ──────────────────────────────────────────────── */}
+      <div className="flex flex-col items-center justify-center px-8 py-12 relative"
+        style={{ background: "#FFFCF7", borderLeft: "1.5px solid rgba(23,40,44,0.08)" }}>
 
-                {/* Last verdict pill — right-aligned */}
-                <div className="flex-1" />
-                {lastResponse?.verdict && (
-                  <span
-                    className="text-[9px] font-bold px-2 py-0.5 rounded-full mb-1.5"
-                    style={{
-                      background: lastResponse.verdict === "UNSAFE" ? "var(--urgent-bg)"
-                        : lastResponse.verdict === "CAUTION" ? "var(--watch-bg)"
-                        : lastResponse.verdict === "SAFE" ? "var(--well-bg)"
-                        : "var(--surface-sunk)",
-                      color: lastResponse.verdict === "UNSAFE" ? "var(--urgent)"
-                        : lastResponse.verdict === "CAUTION" ? "var(--watch)"
-                        : lastResponse.verdict === "SAFE" ? "var(--well)"
-                        : "var(--ink-soft)",
-                    }}
-                  >
-                    {lastResponse.verdict}
-                  </span>
-                )}
-              </div>
+        {/* Mobile logo */}
+        <div className="flex lg:hidden items-center gap-2 mb-8">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-white text-sm"
+            style={{ background: "linear-gradient(135deg, #0F4C55, #1a6b78)" }}>S</div>
+          <span className="font-bold" style={{ color: "#17282C" }}>HealthTwin AI</span>
+        </div>
 
-              {/* Tab content */}
-              <div className="flex-1 overflow-hidden min-h-0">
-                {rightTab === "insights" ? (
-                  <InsightFeed
-                    insights={insights}
-                    onQuery={(q) => { handleCommand(q, "en"); setRightTab("chat"); }}
-                  />
-                ) : (
-                  <ChatPanel
-                    messages={messages}
-                    isThinking={orbState === "thinking"}
-                    onExampleClick={(t) => handleCommand(t, "en")}
-                    onAction={handleAction}
-                  />
-                )}
-              </div>
-            </div>
-          )}
+        <div className="w-full max-w-sm mb-6">
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+            className="text-2xl font-black mb-1.5"
+            style={{ color: "#17282C", letterSpacing: "-0.01em" }}
+          >
+            Your family's health,{" "}
+            <span className="bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(90deg, #0F4C55, #E2922F)" }}>
+              protected
+            </span>
+          </motion.h2>
+          <p className="text-sm" style={{ color: "#8A9696" }}>
+            Sign in or create an account to get started
+          </p>
+        </div>
+
+        <div className="w-full max-w-sm">
+          <AuthForm />
         </div>
       </div>
     </div>

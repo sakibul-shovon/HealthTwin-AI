@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.graph.database import get_db
-from app.graph.models import Household
 from app.voice.nlu import detect_bengali
 from app.voice.pending import retrieve_pending, clear_pending
 from app.agents.brain import run_brain
@@ -14,22 +13,18 @@ from app.agents.care import set_reminder_from_nlu
 from app.agents.pattern import run_pattern_check
 from app.spine.emergency import scan_red_flags, build_emergency_envelope
 from app.memory.chat_store import save_turn, get_recent
+from app.core.auth import get_current_household_id
 
 _CARE_WRITE_INTENTS = {"SET_REMINDER"}
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
-DEFAULT_HOUSEHOLD_ID = 1  # Rahman Family from seed
-
-
-def _get_household_id(db: Session) -> int:
-    hh = db.query(Household).filter(Household.name == "Rahman Family").first()
-    return hh.id if hh else DEFAULT_HOUSEHOLD_ID
-
 
 class CommandRequest(BaseModel):
     transcript: str = Field(..., max_length=1000)
     language: Optional[str] = None
+    session_id: Optional[int] = None
+    member_focus: Optional[list[str]] = None
 
 
 class ConfirmRequest(BaseModel):
@@ -38,19 +33,20 @@ class ConfirmRequest(BaseModel):
 
 
 @router.post("/command")
-def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
-    household_id = _get_household_id(db)
+def voice_command(
+    req: CommandRequest,
+    household_id: int = Depends(get_current_household_id),
+    db: Session = Depends(get_db),
+):
     language = "bn" if (req.language == "bn" or detect_bengali(req.transcript)) else "en"
 
-    # ── Recent turns → chat history for the brain (oldest→newest) ─────────────
-    recent_turns = get_recent(db, household_id, limit=6)
+    recent_turns = get_recent(db, household_id, limit=20, session_id=req.session_id)
     history = [
         {"role": t.role, "content": t.text}
-        for t in reversed(recent_turns)
+        for t in recent_turns
         if t.role in ("user", "assistant") and t.text
     ]
 
-    # ── Hard emergency pre-filter (never trust the LLM to catch a red flag) ───
     red_flag = scan_red_flags(req.transcript or "")
     if red_flag:
         raw = build_emergency_envelope(db, household_id, red_flag, None, language)
@@ -71,34 +67,35 @@ def voice_command(req: CommandRequest, db: Session = Depends(get_db)):
             }
 
     envelope = compose(raw, interpreted=raw.get("display", {}).get("interpreted"))
-    # The brain sets needs_confirmation/pending_id itself for prepare_* writes.
     envelope.setdefault("needs_confirmation", raw.get("needs_confirmation", False))
     if raw.get("pending_id"):
         envelope["pending_id"] = raw["pending_id"]
 
     try:
         save_turn(db=db, household_id=household_id, role="user",
-                  text=req.transcript, language=language)
+                  text=req.transcript, language=language, session_id=req.session_id)
         save_turn(db=db, household_id=household_id, role="assistant",
                   text=envelope.get("spoken", ""), envelope=envelope,
                   intent=envelope.get("intent"), member_focus=envelope.get("member_focus"),
-                  language=envelope.get("language", "en"))
+                  language=envelope.get("language", "en"), session_id=req.session_id)
+        if req.session_id:
+            from app.memory.chat_store import touch_session
+            touch_session(db, req.session_id)
     except Exception as e:
         print(f"Persistence error: {e}")
 
     return envelope
 
 
-
 @router.get("/briefing")
-def daily_briefing(db: Session = Depends(get_db)):
-    """Deterministic daily family health snapshot — no LLM call, pure DB + pattern check."""
+def daily_briefing(
+    household_id: int = Depends(get_current_household_id),
+    db: Session = Depends(get_db),
+):
     from sqlalchemy.orm import joinedload
     from app.graph.models import Member as MemberModel
 
-    household_id = _get_household_id(db)
     language = "en"
-
     members = (
         db.query(MemberModel)
         .options(
@@ -124,7 +121,6 @@ def daily_briefing(db: Session = Depends(get_db)):
             "actions": [], "member_focus": None, "language": language,
         }
 
-    # Per-member watch flags
     watch_flags = []
     for m in members:
         flags = []
@@ -138,12 +134,10 @@ def daily_briefing(db: Session = Depends(get_db)):
         if flags:
             watch_flags.append(f"{m.role_label}: {'; '.join(flags)}")
 
-    # Household pattern check
     pattern = run_pattern_check(db, household_id, language)
     pattern_conflict = pattern["display"].get("conflict")
     pattern_members = pattern["display"].get("members", [])
 
-    # Compose spoken summary
     total_meds = sum(len(m.medications) for m in members)
     parts = [f"Family health briefing: {len(members)} members, {total_meds} active medications."]
     if watch_flags:
@@ -154,7 +148,6 @@ def daily_briefing(db: Session = Depends(get_db)):
         parts.append("No household patterns detected.")
     spoken = " ".join(parts)
 
-    # Detail card (one bullet per member)
     detail_lines = []
     for m in members:
         meds_str = ", ".join(med.name for med in m.medications) or "no medications"
@@ -188,7 +181,11 @@ def daily_briefing(db: Session = Depends(get_db)):
 
 
 @router.post("/confirm")
-def voice_confirm(req: ConfirmRequest, db: Session = Depends(get_db)):
+def voice_confirm(
+    req: ConfirmRequest,
+    household_id: int = Depends(get_current_household_id),
+    db: Session = Depends(get_db),
+):
     nlu = retrieve_pending(req.pending_id)
     if not nlu:
         raise HTTPException(status_code=404, detail="Pending command not found or already resolved")
@@ -208,7 +205,6 @@ def voice_confirm(req: ConfirmRequest, db: Session = Depends(get_db)):
             "language": lang,
         }
 
-    household_id = _get_household_id(db)
     if nlu.intent in _CARE_WRITE_INTENTS:
         return set_reminder_from_nlu(db, household_id, nlu)
     return run_profile_write(db, household_id, nlu)

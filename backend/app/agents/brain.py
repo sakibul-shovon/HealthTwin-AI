@@ -401,7 +401,7 @@ def run_brain(db: Session, household_id: int, user_message: str, language: str,
 
     messages: list[dict] = [{"role": "system", "content": system}]
     if history:
-        messages.extend(history[-6:])
+        messages.extend(history[-20:])
     messages.append({"role": "user", "content": user_message})
 
     client = Groq(api_key=settings.GROQ_API_KEY)

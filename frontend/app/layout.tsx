@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ClientLayout from "./ClientLayout";
 
 export const metadata: Metadata = {
-  title: "HealthTwin — Family Command Center",
-  description: "Voice-controlled health intelligence for the whole family",
+  title: "Samantha — AI Family Health Guardian",
+  description: "Your personal AI companion for family health and wellbeing",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        <ClientLayout>{children}</ClientLayout>
+      </body>
     </html>
   );
 }

@@ -17,6 +17,8 @@ interface Props {
   verdict?: string | null;
   riskBands?: Record<string, RiskBand>;
   onSelect: (label: string) => void;
+  /** Role labels of members selected as Samantha context (multi-select). */
+  selectedMembers?: string[];
   /** Rendered at the centre of the constellation — the Voice Orb lives here. */
   centerSlot?: ReactNode;
   /** Larger, center-stage sizing for the hero layout. */
@@ -52,12 +54,13 @@ export default function Constellation({
   verdict,
   riskBands = {},
   onSelect,
+  selectedMembers = [],
   centerSlot,
   hero = false,
 }: Props) {
   const RADIUS = hero ? 152 : 96;
   const NODE_R = hero ? 32 : 26;             // node circle radius in px
-  const LABEL_H = hero ? 48 : 0;             // extra bottom room for role+age labels
+  const LABEL_H = hero ? 56 : 0;             // extra bottom room for role+age labels
   const SIZE = RADIUS * 2 + NODE_R * 4 + 8 + LABEL_H;  // total svg canvas
   const cx = SIZE / 2;
   const cy = SIZE / 2;
@@ -120,11 +123,11 @@ export default function Constellation({
           </radialGradient>
         </defs>
 
-        {/* Outer ring guide (faint) */}
+        {/* Outer ring guide */}
         <circle
           cx={cx} cy={cy} r={RADIUS}
           fill="none"
-          stroke="rgba(19,45,49,0.09)"
+          stroke="rgba(19,45,49,0.15)"
           strokeWidth="1"
           strokeDasharray="3 6"
         />
@@ -145,7 +148,7 @@ export default function Constellation({
               stroke={alerted ? ALERT : focused ? focusColor : c2}
               strokeWidth={focused ? 1.75 : alerted ? 1.75 : 1}
               strokeDasharray={focused ? "none" : alerted ? "4 3" : "3 5"}
-              opacity={focused ? 0.65 : alerted ? 0.6 : 0.2}
+              opacity={focused ? 0.75 : alerted ? 0.65 : 0.35}
             />
           );
         })}
@@ -191,6 +194,7 @@ export default function Constellation({
         const focused  = m.role_label === focusedMember;
         const active   = m.role_label === activeMember;
         const alerted  = alertMembers.includes(m.role_label);
+        const selected = selectedMembers.includes(m.role_label);
         const dimmed   = isDimming && !focused && !alerted;
         const [c1, c2] = getGradient(m.role_label);
         const D        = NODE_R * 2;
@@ -272,6 +276,21 @@ export default function Constellation({
               />
             )}
 
+            {/* Selected-context ring — user picked this member for Samantha */}
+            {selected && !focused && (
+              <motion.div
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  width: D + 10, height: D + 10,
+                  left: -5, top: -5,
+                  border: `2px solid var(--primary)`,
+                  opacity: 0.5,
+                }}
+                animate={{ opacity: [0.4, 0.75, 0.4] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            )}
+
             {/* Alert pulsing ring */}
             {alerted && !focused && (
               <motion.div
@@ -297,14 +316,14 @@ export default function Constellation({
                   : alerted
                   ? "var(--watch-bg)"
                   : active
-                  ? `linear-gradient(135deg, ${c1}22, ${c2}18)`
-                  : "var(--surface)",
+                  ? `linear-gradient(135deg, ${c1}33, ${c2}22)`
+                  : `${c1}18`,
                 color: focused ? "#fff" : alerted ? "var(--watch)" : c2,
-                border: `1.5px solid ${
+                border: `2px solid ${
                   focused ? c1 :
                   alerted ? ALERT :
                   active  ? c1 :
-                  "var(--border-bright)"
+                  `${c1}55`
                 }`,
                 boxShadow: focused
                   ? `0 4px 16px ${c1}44, 0 1px 3px rgba(16,38,42,0.12)`
@@ -326,15 +345,39 @@ export default function Constellation({
               {m.role_label[0].toUpperCase()}
             </motion.div>
 
+            {/* Selected-context indicator dot */}
+            {selected && !focused && (
+              <div
+                className="absolute z-20"
+                style={{
+                  width: 8, height: 8,
+                  borderRadius: "50%",
+                  background: "var(--primary)",
+                  top: -2, right: -2,
+                  border: "1.5px solid var(--surface)",
+                }}
+              />
+            )}
+
             {/* Name label below node */}
-            <div className="flex flex-col items-center mt-1.5" style={{ width: 64, marginLeft: -(64 - D) / 2 }}>
+            <div
+              className="flex flex-col items-center mt-2"
+              style={{ width: hero ? 72 : 60, marginLeft: -(( hero ? 72 : 60) - D) / 2 }}
+            >
               <span
-                className="text-[11px] font-semibold leading-tight text-center"
-                style={{ color: focused ? c2 : "var(--ink)" }}
+                className="font-bold leading-tight text-center"
+                style={{
+                  fontSize: hero ? 13 : 11,
+                  color: focused ? c2 : "var(--ink)",
+                  letterSpacing: "-0.01em",
+                }}
               >
                 {m.role_label}
               </span>
-              <span className="text-[9px] text-center" style={{ color: "var(--ink-soft)" }}>
+              <span
+                className="text-center font-medium mt-0.5"
+                style={{ fontSize: hero ? 11 : 9, color: "var(--ink-soft)" }}
+              >
                 {m.age}y
               </span>
             </div>

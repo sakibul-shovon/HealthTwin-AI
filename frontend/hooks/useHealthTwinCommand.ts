@@ -1,0 +1,154 @@
+import { useCallback, useRef } from "react";
+import { useTwinStore } from "@/lib/store";
+import { useVoice } from "@/hooks/useVoice";
+import { post } from "@/lib/api";
+import { ResponseEnvelope } from "@/lib/types";
+
+export function useHealthTwinCommand() {
+  const {
+    setOrbState,
+    setLastResponse,
+    setTranscript,
+    addMessage,
+    setEmergency,
+    orbState,
+    voiceEnabled,
+  } = useTwinStore();
+
+  const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { isListening, isSTTSupported, startListening, stopListening, speak, cancelSpeech } =
+    useVoice({
+      onTranscript: (t, l) => handleCommand(t, l),
+      onError: () => {
+        setOrbState("error");
+        setTimeout(() => setOrbState("idle"), 2000);
+      },
+      onListeningEnd: () => {
+        if (useTwinStore.getState().orbState === "listening") setOrbState("idle");
+      },
+      voiceEnabled,
+    });
+
+  const handleCommand = useCallback(
+    async (inputTranscript: string, lang: "en" | "bn") => {
+      cancelSpeech();
+      if (!inputTranscript.trim()) return;
+
+      if (speakTimeoutRef.current) {
+        clearTimeout(speakTimeoutRef.current);
+        speakTimeoutRef.current = null;
+      }
+
+      setTranscript(inputTranscript);
+      setOrbState("thinking");
+
+      addMessage({
+        id: `u-${Date.now()}`,
+        role: "user",
+        text: inputTranscript,
+        timestamp: Date.now(),
+      });
+
+      const { selectedFamilyMembers, currentSessionId } = useTwinStore.getState();
+      const data = await post("/api/voice/command", {
+        transcript: inputTranscript,
+        language: lang,
+        ...(selectedFamilyMembers.length > 0 && { member_focus: selectedFamilyMembers }),
+        ...(currentSessionId !== null && { session_id: currentSessionId }),
+      });
+
+      if (data) {
+        const envelope = data as ResponseEnvelope;
+        if (envelope.verdict === "EMERGENCY") {
+          setEmergency(true, envelope);
+        }
+        setLastResponse(envelope);
+        setOrbState("speaking");
+
+        addMessage({
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          text: envelope.spoken,
+          envelope,
+          timestamp: Date.now(),
+        });
+
+        const afterSpeak = () => {
+          if (envelope.verdict === "CLARIFY" && isSTTSupported) {
+            setOrbState("listening");
+            startListening(lang);
+          } else {
+            setOrbState("idle");
+          }
+        };
+
+        if (!voiceEnabled) {
+          // Voice is muted — skip TTS, return to idle after a beat
+          const wordCount = envelope.spoken.split(" ").length;
+          setTimeout(afterSpeak, Math.max(1500, wordCount * 200));
+        } else {
+          const utterance = speak(envelope.spoken, (envelope.language as "en" | "bn") ?? lang);
+          if (utterance) {
+            // Safety timeout so orb never gets stuck in "speaking"
+            speakTimeoutRef.current = setTimeout(afterSpeak, 30_000);
+            utterance.onend = () => {
+              if (speakTimeoutRef.current) {
+                clearTimeout(speakTimeoutRef.current);
+                speakTimeoutRef.current = null;
+              }
+              afterSpeak();
+            };
+          } else {
+            const wordCount = envelope.spoken.split(" ").length;
+            setTimeout(afterSpeak, Math.max(2500, wordCount * 350));
+          }
+        }
+      } else {
+        setOrbState("error");
+        setTimeout(() => setOrbState("idle"), 2000);
+      }
+    },
+    [setOrbState, setLastResponse, setTranscript, addMessage, speak, cancelSpeech, voiceEnabled, isSTTSupported, startListening, setEmergency]
+  );
+
+  function handleOrbClick(lang: "en" | "bn" = "en") {
+    cancelSpeech();
+    if (speakTimeoutRef.current) {
+      clearTimeout(speakTimeoutRef.current);
+      speakTimeoutRef.current = null;
+    }
+    if (orbState === "listening") {
+      stopListening();
+      setOrbState("idle");
+    } else {
+      setOrbState("listening");
+      startListening(lang);
+    }
+  }
+
+  function handleMicClick(lang: "en" | "bn") {
+    cancelSpeech();
+    if (speakTimeoutRef.current) {
+      clearTimeout(speakTimeoutRef.current);
+      speakTimeoutRef.current = null;
+    }
+    if (orbState === "listening") {
+      stopListening();
+      setOrbState("idle");
+    } else {
+      setOrbState("listening");
+      startListening(lang);
+    }
+  }
+
+  return {
+    handleCommand,
+    handleOrbClick,
+    handleMicClick,
+    isListening,
+    isSTTSupported,
+    speak,
+    cancelSpeech,
+  };
+}

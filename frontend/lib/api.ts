@@ -1,8 +1,47 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = '';
+
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("ht-token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// ── Auth endpoints ─────────────────────────────────────────────────────────────
+
+export async function loginUser(email: string, password: string) {
+  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Login failed');
+  }
+  return await res.json();
+}
+
+export async function registerUser(email: string, password: string, family_name: string) {
+  const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, family_name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Registration failed');
+  }
+  return await res.json();
+}
+
+// ── Household ─────────────────────────────────────────────────────────────────
 
 export async function getHousehold() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/household`);
+    const res = await fetch(`${API_BASE_URL}/api/household`, {
+      cache: 'no-store',
+      headers: authHeaders(),
+    });
     if (!res.ok) throw new Error('Network response was not ok');
     return await res.json();
   } catch (error) {
@@ -13,13 +52,55 @@ export async function getHousehold() {
 
 export async function getChatHistory(limit = 50) {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/chat/history?limit=${limit}`);
+    const res = await fetch(`${API_BASE_URL}/api/chat/history?limit=${limit}`, { cache: 'no-store', headers: authHeaders() });
     if (!res.ok) throw new Error('Network response was not ok');
     return await res.json();
   } catch (error) {
     console.error('Error fetching chat history:', error);
     return [];
   }
+}
+
+// ── Chat sessions ─────────────────────────────────────────────────────────────
+
+export async function getSessions() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/sessions`, { cache: 'no-store', headers: authHeaders() });
+    if (!res.ok) throw new Error('Sessions fetch failed');
+    return await res.json();
+  } catch { return []; }
+}
+
+export async function createSession(title = 'New chat') {
+  return post('/api/chat/sessions', { title });
+}
+
+export async function renameSession(id: number, title: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) throw new Error('Rename failed');
+    return await res.json();
+  } catch { return null; }
+}
+
+export async function deleteSession(id: number) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (!res.ok) throw new Error('Delete failed');
+    return await res.json();
+  } catch { return null; }
+}
+
+export async function getSessionMessages(sessionId: number, limit = 100) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${sessionId}/messages?limit=${limit}`, { cache: 'no-store', headers: authHeaders() });
+    if (!res.ok) throw new Error('Messages fetch failed');
+    return await res.json();
+  } catch { return []; }
 }
 
 export async function clearChatHistory() {
@@ -46,7 +127,7 @@ export async function getEmergencyCard(memberId: number) {
 
 export async function getMemberTwin(memberId: number) {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/twin`);
+    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/twin`, { headers: authHeaders() });
     if (!res.ok) throw new Error('Network response was not ok');
     return await res.json();
   } catch (error) {
@@ -57,7 +138,7 @@ export async function getMemberTwin(memberId: number) {
 
 export async function getMemberTimeline(memberId: number) {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/timeline`);
+    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/timeline`, { headers: authHeaders() });
     if (!res.ok) throw new Error('Network response was not ok');
     return await res.json();
   } catch (error) {
@@ -68,7 +149,7 @@ export async function getMemberTimeline(memberId: number) {
 
 export async function getInsights() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/ai/insights`);
+    const res = await fetch(`${API_BASE_URL}/api/ai/insights`, { cache: 'no-store', headers: authHeaders() });
     if (!res.ok) throw new Error('Insights fetch failed');
     return await res.json() as { insights: import('./types').InsightItem[]; risk_bands: Record<string, import('./types').RiskBand> };
   } catch (error) {
@@ -79,7 +160,7 @@ export async function getInsights() {
 
 export async function getBriefing() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/voice/briefing`);
+    const res = await fetch(`${API_BASE_URL}/api/voice/briefing`, { cache: 'no-store', headers: authHeaders() });
     if (!res.ok) throw new Error('Briefing fetch failed');
     return await res.json();
   } catch (error) {
@@ -118,6 +199,7 @@ export async function post(path: string, body: Record<string, unknown>) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders(),
       },
       body: JSON.stringify(body),
     });
@@ -138,6 +220,7 @@ export async function uploadFile(file: File, memberId?: string, kind?: string) {
 
     const res = await fetch(`${API_BASE_URL}/api/upload`, {
       method: 'POST',
+      headers: authHeaders(),
       body: formData,
     });
     if (!res.ok) throw new Error('Upload failed');
@@ -152,9 +235,7 @@ export async function confirmUpload(pendingId: string, edits?: any) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/upload/confirm`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
         pending_id: pendingId,
         edits: edits || null,
@@ -187,9 +268,7 @@ export async function createMember(data: any) {
 export async function updateMember(memberId: string | number, data: any) {
     const res = await fetch(`${API_BASE_URL}/api/member/${memberId}`, {
         method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Update member failed');
@@ -199,6 +278,7 @@ export async function updateMember(memberId: string | number, data: any) {
 export async function deleteMember(memberId: string | number) {
     const res = await fetch(`${API_BASE_URL}/api/member/${memberId}`, {
         method: 'DELETE',
+        headers: authHeaders(),
     });
     if (!res.ok) throw new Error('Delete member failed');
     return await res.json();
@@ -213,7 +293,7 @@ export async function addMedication(memberId: string | number, name: string, dos
 }
 
 export async function removeMedication(memberId: string | number, name: string) {
-    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/medication/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/medication/${encodeURIComponent(name)}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) throw new Error('Remove medication failed');
     return await res.json();
 }
@@ -223,7 +303,7 @@ export async function addCondition(memberId: string | number, name: string) {
 }
 
 export async function removeCondition(memberId: string | number, name: string) {
-    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/condition/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/condition/${encodeURIComponent(name)}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) throw new Error('Remove condition failed');
     return await res.json();
 }
@@ -233,7 +313,7 @@ export async function addAllergy(memberId: string | number, name: string, reacti
 }
 
 export async function removeAllergy(memberId: string | number, name: string) {
-    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/allergy/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE_URL}/api/member/${memberId}/allergy/${encodeURIComponent(name)}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) throw new Error('Remove allergy failed');
     return await res.json();
 }

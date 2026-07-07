@@ -6,46 +6,93 @@
 
 /* ── Design Tokens — "Warm clinical calm with a marigold voice signature" ──── */
 :root {
-  /* Canvas & surface — warm paper, not sterile hospital white */
-  --canvas:        #F5F1E9;  /* warm paper — main background */
-  --surface:       #FCFAF5;  /* raised cards */
-  --surface-sunk:  #ECE6DA;  /* wells, insets, quiet chips */
+  --canvas: #F7F4ED;
+  --surface: #FFFCF7;
+  --surface-muted: #EFE8DC;
+  --surface-raised: #FFFFFF;
 
-  /* Primary — deep petrol/teal: medical trust + calm */
-  --primary:       #0F4C55;
-  --primary-tint:  #D6E6E2;  /* soft fills, selected member */
-  --primary-deep:  #0A363D;  /* headers, deep accents */
+  --ink: #17282C;
+  --ink-soft: #58686B;
+  --ink-faint: #8A9696;
 
-  /* Accent — MARIGOLD: the voice signature + primary CTA (cultural warmth) */
-  --accent:        #E2922F;
-  --accent-deep:   #C1741B;  /* hover / pressed */
-  --accent-glow:   rgba(226,146,47,0.22);  /* orb halo, ripples */
+  --primary: #0F4C55;
+  --primary-deep: #0A363D;
+  --primary-tint: #DCEBE7;
 
-  /* Ink */
-  --ink:           #17282C;  /* primary text */
-  --ink-soft:      #566669;  /* secondary text */
-  --ink-faint:     #97A3A2;  /* captions, meta, scrollbars */
+  --accent: #E2922F;
+  --accent-deep: #B96D19;
+  --accent-tint: #F7E5C8;
 
-  /* Semantic health status — the safety language (used ONLY for health meaning) */
-  --well:          #2E7D5B;  /* safe / healthy */
-  --well-bg:       #E3EFE8;
-  --watch:         #B87A03;  /* caution (darkened for AA on paper) */
-  --watch-bg:      #FBF0D2;
-  --urgent:        #C33A4C;  /* unsafe / emergency — rose, not alarm-red */
-  --urgent-bg:     #F7E2E5;
-  --info:          #2E6E92;
-  --info-bg:       #E1EDF3;
+  --well: #2E7D5B;
+  --well-bg: #E4F0E8;
 
-  /* Frosted-paper surfaces (keeps `--glass*` names for compatibility) */
-  --glass:         rgba(255,255,255,0.60);
-  --glass-bright:  rgba(255,255,255,0.86);
-  --border:        rgba(19,45,49,0.10);
-  --border-bright: rgba(19,45,49,0.17);
+  --watch: #A86900;
+  --watch-bg: #F8EBC7;
 
-  /* Soft elevation — light UIs read premium through shadow, not neon glow */
-  --shadow-sm:     0 1px 2px rgba(16,38,42,0.06), 0 1px 3px rgba(16,38,42,0.04);
-  --shadow-md:     0 4px 14px rgba(16,38,42,0.09), 0 2px 5px rgba(16,38,42,0.05);
-  --shadow-lg:     0 14px 38px rgba(16,38,42,0.14), 0 5px 10px rgba(16,38,42,0.07);
+  --urgent: #BF3348;
+  --urgent-bg: #F6DFE3;
+
+  --info: #2D6F8F;
+  --info-bg: #E0EDF3;
+
+  --border: rgba(23, 40, 44, 0.10);
+  --border-strong: rgba(23, 40, 44, 0.18);
+  --border-bright: rgba(23, 40, 44, 0.17);
+
+  --shadow-sm: 0 1px 2px rgba(16, 38, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(16, 38, 42, 0.08);
+  --shadow-lg: 0 18px 48px rgba(16, 38, 42, 0.12);
+
+  --accent-glow: rgba(226,146,47,0.22);
+  --glass: rgba(255,255,255,0.60);
+  --glass-bright: rgba(255,255,255,0.86);
+
+  --surface-sunk: #EDE7DC;
+}
+
+[data-theme="dark"] {
+  --canvas: #101716;
+  --surface: #151F1E;
+  --surface-muted: #1D2A28;
+  --surface-raised: #1A2524;
+
+  --ink: #ECF2EF;
+  --ink-soft: #B5C2BE;
+  --ink-faint: #7F908B;
+
+  --primary: #7BB7AF;
+  --primary-deep: #A6D4CE;
+  --primary-tint: rgba(123, 183, 175, 0.15);
+
+  --accent: #E7A84D;
+  --accent-deep: #F1C276;
+  --accent-tint: rgba(231, 168, 77, 0.16);
+
+  --well: #78C79A;
+  --well-bg: rgba(120, 199, 154, 0.14);
+
+  --watch: #E5B757;
+  --watch-bg: rgba(229, 183, 87, 0.15);
+
+  --urgent: #EB7180;
+  --urgent-bg: rgba(235, 113, 128, 0.16);
+
+  --info: #7DBCDD;
+  --info-bg: rgba(125, 188, 221, 0.14);
+
+  --border: rgba(236, 242, 239, 0.10);
+  --border-strong: rgba(236, 242, 239, 0.18);
+  --border-bright: rgba(236, 242, 239, 0.18);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.36);
+
+  --accent-glow: rgba(231,168,77,0.22);
+  --glass: rgba(21, 31, 30, 0.60);
+  --glass-bright: rgba(21, 31, 30, 0.86);
+
+  --surface-sunk: #121B1A;
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -90,10 +137,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .glass-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  border: 1.5px solid var(--border-strong);
   border-radius: 16px;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 2px 6px rgba(16, 38, 42, 0.06), 0 8px 24px rgba(16, 38, 42, 0.09);
 }
 
 .glass-bright {
@@ -166,4 +213,69 @@ h1, h2, h3, h4, h5, h6 {
 @media print {
   header, nav, aside, .no-print { display: none !important; }
   body { background: white; color: black; font-size: 12pt; overflow: auto; }
+}
+
+/* ── Sidebar state animations (CSS — runs on compositor, not JS thread) ── */
+@keyframes sidebar-logo-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.08); }
+}
+@keyframes sidebar-dot-listen {
+  0%, 100% { transform: scale(1);   opacity: 0.8; }
+  50%       { transform: scale(1.5); opacity: 1;   }
+}
+@keyframes sidebar-dot-think {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 1;    }
+}
+
+.sidebar-logo-pulse { animation: sidebar-logo-pulse 1.6s ease-in-out infinite; }
+.sidebar-dot-listen  { animation: sidebar-dot-listen  1s   ease-in-out infinite; }
+.sidebar-dot-think   { animation: sidebar-dot-think   1s   ease-in-out infinite; }
+
+/* ── Samantha voice animations ──────────────────────────────────────────── */
+@keyframes samantha-wave {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.6; }
+  50%       { transform: scaleY(1);    opacity: 1;   }
+}
+
+@keyframes samantha-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes samantha-breathe {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.06); }
+}
+
+@keyframes samantha-appear {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.samantha-wave-bar {
+  display: inline-block;
+  width: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  transform-origin: bottom center;
+  animation: samantha-wave 1.1s ease-in-out infinite;
+}
+
+.samantha-appear {
+  animation: samantha-appear 0.3s ease-out forwards;
+}
+
+/* ── Conversation message styles ────────────────────────────────────────── */
+.samantha-msg {
+  background: var(--primary-tint);
+  border: 1px solid rgba(15, 76, 85, 0.10);
+  border-radius: 16px 16px 16px 4px;
+}
+
+.user-msg {
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: 16px 16px 4px 16px;
 }
