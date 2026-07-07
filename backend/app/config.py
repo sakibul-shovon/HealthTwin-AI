@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # Triage Agent: local emergency number (Bangladesh national emergency = 999)
     EMERGENCY_NUMBER: str = "999"
     NEAREST_HOSPITAL: str = "https://maps.google.com/?q=hospital"
+    JWT_SECRET: str = "change-me-in-production-healthtwin-secret-2024"
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

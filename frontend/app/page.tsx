@@ -1,388 +1,413 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTwinStore } from "@/lib/store";
-import { useVoiceCommand } from "@/lib/VoiceCommandContext";
-import { getBriefing, getInsights } from "@/lib/api";
-import { InsightItem, RiskBand } from "@/lib/types";
-import Constellation from "@/components/Constellation";
-import Link from "next/link";
-import { ShieldAlert, ChevronRight, Play } from "lucide-react";
+import { loginUser, registerUser } from "@/lib/api";
+import { Shield, Activity, Users, Brain, Lock, ChevronRight, Eye, EyeOff, Sparkles } from "lucide-react";
 
-function useClockTick() {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
+const FEATURES = [
+  { icon: Shield,   title: "3-Gate Safety Engine",   desc: "Interaction, contraindication & allergy checks on every medication" },
+  { icon: Brain,    title: "AI Voice Assistant",      desc: "Ask in English or Bengali — she remembers your whole family" },
+  { icon: Activity, title: "Live Risk Monitoring",    desc: "Real-time health risk scoring with proactive alerts" },
+  { icon: Users,    title: "Multi-Member Families",   desc: "Each member has their own digital health twin" },
+];
 
-function formatTime(d: Date) {
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-}
+const STATS = [
+  { value: "3-Gate", label: "Safety Verification" },
+  { value: "20+",    label: "Drug Interactions" },
+  { value: "EN/BN",  label: "Bilingual" },
+  { value: "100%",   label: "Private & Secure" },
+];
 
-function formatDate(d: Date) {
-  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-}
-
-function greeting(d: Date): string {
-  const h = d.getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-const SEVERITY_COLOR: Record<string, string> = {
-  HIGH: "var(--urgent)",
-  MED:  "var(--watch)",
-  LOW:  "var(--info)",
-};
-
-export default function HomePage() {
-  const {
-    household,
-    activeMember,
-    selectedFamilyMembers,
-    toggleFamilyMember,
-    clearFamilySelection,
-    voiceEnabled,
-    setSamanthaGreeted,
-  } = useTwinStore();
-
-  const { speak, cancelSpeech } = useVoiceCommand();
-
-  const now = useClockTick();
-  const [briefing, setBriefing] = useState<any>(null);
-  const [insights, setInsights] = useState<InsightItem[]>([]);
-  const [riskBands, setRiskBands] = useState<Record<string, RiskBand>>({});
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const members = household?.members ?? [];
-
-  // Self member for personalised greeting
-  const selfMember = members.find(
-    (m) => m.role_label === "Self" || m.role_label?.toLowerCase() === "self"
+// ── Subtle warm background blobs ──────────────────────────────────────────────
+function WarmBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <motion.div className="absolute rounded-full"
+        style={{ width: 500, height: 500, top: -120, left: -80,
+          background: "radial-gradient(circle, rgba(15,76,85,0.07) 0%, transparent 70%)" }}
+        animate={{ scale: [1, 1.08, 1], opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div className="absolute rounded-full"
+        style={{ width: 350, height: 350, bottom: -60, left: 100,
+          background: "radial-gradient(circle, rgba(226,146,47,0.08) 0%, transparent 70%)" }}
+        animate={{ scale: [1, 1.12, 1], opacity: [0.4, 0.8, 0.4] }}
+        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+      />
+      <motion.div className="absolute rounded-full"
+        style={{ width: 250, height: 250, top: "45%", left: "35%",
+          background: "radial-gradient(circle, rgba(15,76,85,0.05) 0%, transparent 70%)" }}
+        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+      />
+    </div>
   );
-  const firstName =
-    selfMember?.display_name?.split(" ")[0] ??
-    household?.name?.split(" ")[0] ??
-    "there";
+}
 
-  useEffect(() => {
-    const init = async () => {
-      const [brief, insightData] = await Promise.all([
-        getBriefing(),
-        getInsights(),
-      ]);
-      if (brief) setBriefing(brief);
-      if (insightData) {
-        setInsights(insightData.insights ?? []);
-        setRiskBands(insightData.risk_bands ?? {});
+// ── Samantha orb in app color scheme ─────────────────────────────────────────
+function SamanthaOrb() {
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 100, height: 100 }}>
+      {[1, 2, 3].map(i => (
+        <motion.div key={i} className="absolute rounded-full border"
+          style={{
+            width: 100 + i * 26, height: 100 + i * 26,
+            borderColor: `rgba(15,76,85,${0.12 - i * 0.03})`,
+          }}
+          animate={{ scale: [1, 1.05, 1], opacity: [0.5, 0.9, 0.5] }}
+          transition={{ duration: 3, repeat: Infinity, delay: i * 0.4 }}
+        />
+      ))}
+      <motion.div
+        className="relative z-10 w-24 h-24 rounded-3xl flex items-center justify-center text-white font-black text-4xl select-none"
+        style={{
+          background: "linear-gradient(135deg, #0F4C55 0%, #1a6b78 50%, #E2922F 100%)",
+          backgroundSize: "200% 200%",
+          boxShadow: "0 0 32px rgba(15,76,85,0.25), 0 0 64px rgba(226,146,47,0.12)",
+        }}
+        animate={{
+          backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
+          boxShadow: [
+            "0 0 32px rgba(15,76,85,0.25), 0 0 64px rgba(226,146,47,0.12)",
+            "0 0 48px rgba(15,76,85,0.4), 0 0 96px rgba(226,146,47,0.2)",
+            "0 0 32px rgba(15,76,85,0.25), 0 0 64px rgba(226,146,47,0.12)",
+          ],
+        }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        S
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Auth form ─────────────────────────────────────────────────────────────────
+type AuthMode = "login" | "register";
+
+function AuthForm() {
+  const router = useRouter();
+  const { setAuth } = useTwinStore();
+
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [familyName, setFamilyName] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  function fillDemo() {
+    setMode("login");
+    setEmail("demo@healthtwin.ai");
+    setPassword("Demo1234!");
+    setError("");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      let result;
+      if (mode === "login") {
+        result = await loginUser(email, password);
+      } else {
+        if (!familyName.trim()) { setError("Family name is required"); setLoading(false); return; }
+        result = await registerUser(email, password, familyName);
       }
-    };
-    init();
-  }, []);
-
-  function playGreeting() {
-    if (!briefing || !voiceEnabled) return;
-    setIsPlaying(true);
-    const fullGreeting = `${greeting(now)}, ${firstName}. ${briefing.spoken}`;
-    const handle = speak(fullGreeting, "en");
-    setSamanthaGreeted(true);
-    if (handle) {
-      handle.onend = () => setIsPlaying(false);
-    } else {
-      setTimeout(() => setIsPlaying(false), 4000);
+      setAuth({
+        user_id: result.user_id,
+        email: result.email,
+        household_id: result.household_id,
+        family_name: result.family_name,
+      }, result.token);
+      router.push("/home");
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
   }
 
-  function stopGreeting() {
-    cancelSpeech();
-    setIsPlaying(false);
-  }
-
-  const highInsights = insights.filter((i) => i.severity === "HIGH").slice(0, 3);
-  const otherInsights = insights.filter((i) => i.severity !== "HIGH").slice(0, 3);
-  const displayInsights = [...highInsights, ...otherInsights].slice(0, 4);
+  const inputStyle = {
+    background: "#F7F4ED",
+    border: "1.5px solid rgba(23,40,44,0.14)",
+    color: "#17282C",
+    outline: "none",
+  };
 
   return (
-    <div
-      className="flex flex-col min-h-full overflow-y-auto custom-scrollbar pb-4"
-      style={{ background: "var(--canvas)" }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      className="w-full"
     >
-      {/* ── Time & greeting row ─────────────────────────────────────────── */}
-      <div className="px-6 pt-8 pb-6 flex items-start justify-between gap-4">
-        <div>
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="font-mono-num font-bold leading-none"
-            style={{ fontSize: "clamp(2.4rem, 6vw, 3.5rem)", color: "var(--ink)" }}
-          >
-            {formatTime(now)}
-          </motion.div>
-          <motion.p
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-base font-medium mt-1"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            {formatDate(now)}
-          </motion.p>
+      {/* Demo button */}
+      <motion.button
+        onClick={fillDemo}
+        whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+        className="w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all"
+        style={{
+          background: "linear-gradient(135deg, rgba(226,146,47,0.1), rgba(226,146,47,0.06))",
+          border: "1.5px solid rgba(226,146,47,0.35)",
+          color: "#B96D19",
+        }}
+      >
+        <Sparkles size={14} style={{ color: "#E2922F" }} />
+        <span className="flex-1 text-left" style={{ color: "#A86900" }}>Try the hackathon demo</span>
+        <span className="text-[10px] font-normal" style={{ color: "#B96D19", opacity: 0.75 }}>demo@healthtwin.ai · Demo1234!</span>
+        <ChevronRight size={13} style={{ color: "#B96D19", opacity: 0.6 }} />
+      </motion.button>
+
+      {/* Card */}
+      <div className="rounded-3xl overflow-hidden"
+        style={{
+          background: "#FFFFFF",
+          border: "1.5px solid rgba(23,40,44,0.10)",
+          boxShadow: "0 12px 48px rgba(16,38,42,0.10), 0 2px 8px rgba(16,38,42,0.06)",
+        }}
+      >
+        {/* Tab toggle */}
+        <div className="flex" style={{ borderBottom: "1.5px solid rgba(23,40,44,0.08)" }}>
+          {(["login", "register"] as AuthMode[]).map(m => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setError(""); }}
+              className="flex-1 py-4 text-sm font-semibold transition-all relative"
+              style={{ color: mode === m ? "#0F4C55" : "#8A9696" }}
+            >
+              {m === "login" ? "Sign In" : "Create Account"}
+              {mode === m && (
+                <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5"
+                  style={{ background: "linear-gradient(90deg, transparent, #0F4C55, transparent)" }} />
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* Emergency shortcut */}
-        <Link
-          href="/emergency"
-          className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-opacity hover:opacity-80"
-          style={{ background: "var(--urgent-bg)", color: "var(--urgent)" }}
-        >
-          <ShieldAlert size={14} />
-          SOS
-        </Link>
-      </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+          <AnimatePresence>
+            {mode === "register" && (
+              <motion.div key="family"
+                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "#58686B" }}>
+                  FAMILY NAME
+                </label>
+                <input
+                  type="text" value={familyName} onChange={e => setFamilyName(e.target.value)}
+                  placeholder="e.g. Rahman Family"
+                  className="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                  style={inputStyle}
+                  required
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* ── Samantha greeting card ──────────────────────────────────────── */}
-      <div className="px-6 mb-6">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.15 }}
-          className="glass-card p-5 relative overflow-hidden"
-        >
-          {/* Subtle gradient accent */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                "radial-gradient(ellipse at top left, rgba(15,76,85,0.06) 0%, transparent 60%)",
-            }}
-          />
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#58686B" }}>EMAIL</label>
+            <input
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="w-full px-4 py-3 rounded-xl text-sm"
+              style={inputStyle}
+              required
+            />
+          </div>
 
-          <div className="flex gap-4 relative z-10">
-            {/* Samantha avatar */}
-            <motion.div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white text-sm shrink-0"
-              style={{
-                background: "linear-gradient(135deg, var(--primary), var(--accent))",
-                boxShadow: "0 2px 12px rgba(15,76,85,0.20)",
-              }}
-              animate={{ scale: [1, 1.04, 1] }}
-              transition={{ duration: 4, repeat: Infinity }}
-            >
-              S
-            </motion.div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--ink-soft)" }}>
-                Samantha
-              </p>
-              <AnimatePresence mode="wait">
-                {briefing ? (
-                  <motion.p
-                    key="briefing"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-sm leading-relaxed"
-                    style={{ color: "var(--ink)" }}
-                  >
-                    <span style={{ color: "var(--ink-soft)" }}>{greeting(now)}, {firstName}. </span>
-                    {briefing.spoken}
-                  </motion.p>
-                ) : (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex gap-1 items-center"
-                  >
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ background: "var(--ink-faint)" }}
-                        animate={{ opacity: [0.3, 1, 0.3] }}
-                        transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-                      />
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {briefing && (
-                <div className="flex items-center gap-3 mt-3">
-                  {/* Manual play/stop button */}
-                  <button
-                    onClick={isPlaying ? stopGreeting : playGreeting}
-                    disabled={!voiceEnabled}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-40"
-                    style={{
-                      background: isPlaying ? "var(--urgent-bg)" : "var(--primary-tint)",
-                      color: isPlaying ? "var(--urgent)" : "var(--primary)",
-                    }}
-                    title={voiceEnabled ? (isPlaying ? "Stop speaking" : "Play greeting") : "Enable voice to hear greeting"}
-                  >
-                    {isPlaying ? (
-                      <>
-                        <motion.span
-                          animate={{ opacity: [1, 0.4, 1] }}
-                          transition={{ duration: 1, repeat: Infinity }}
-                        >■</motion.span>
-                        Stop
-                      </>
-                    ) : (
-                      <>
-                        <Play size={10} />
-                        {voiceEnabled ? "Hear greeting" : "Voice off"}
-                      </>
-                    )}
-                  </button>
-
-                  <Link
-                    href="/ask"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold transition-opacity hover:opacity-70"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    Continue <ChevronRight size={12} />
-                  </Link>
-                </div>
-              )}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#58686B" }}>PASSWORD</label>
+            <div className="relative">
+              <input
+                type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 pr-11 rounded-xl text-sm"
+                style={inputStyle}
+                required minLength={6}
+              />
+              <button type="button" onClick={() => setShowPw(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-70 transition-opacity">
+                {showPw ? <EyeOff size={15} color="#17282C" /> : <Eye size={15} color="#17282C" />}
+              </button>
             </div>
           </div>
+
+          <AnimatePresence>
+            {error && (
+              <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="text-xs px-3 py-2 rounded-xl"
+                style={{ background: "rgba(191,51,72,0.08)", color: "#BF3348", border: "1px solid rgba(191,51,72,0.2)" }}>
+                {error}
+              </motion.p>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            type="submit" disabled={loading}
+            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+            className="w-full py-3.5 rounded-xl font-bold text-sm text-white disabled:opacity-60 mt-1 flex items-center justify-center gap-2"
+            style={{
+              background: "linear-gradient(135deg, #0F4C55, #1a6b78)",
+              boxShadow: "0 4px 16px rgba(15,76,85,0.25)",
+            }}
+          >
+            {loading ? (
+              <motion.div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} />
+            ) : mode === "login" ? "Sign In to Samantha" : "Create Account"}
+          </motion.button>
+        </form>
+      </div>
+
+      <p className="text-center text-[11px] mt-4" style={{ color: "rgba(23,40,44,0.3)" }}>
+        Your data stays private. No data sold. Ever.
+      </p>
+    </motion.div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function LandingPage() {
+  const { authToken } = useTwinStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authToken) router.replace("/home");
+  }, [authToken, router]);
+
+  return (
+    <div className="min-h-screen grid lg:grid-cols-2" style={{ background: "#F7F4ED" }}>
+
+      {/* ── LEFT — Product showcase ─────────────────────────────────────────── */}
+      <div className="relative hidden lg:flex flex-col px-14 py-10 overflow-hidden"
+        style={{ background: "#F7F4ED" }}>
+        <WarmBackground />
+
+        {/* Logo */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 flex items-center gap-3 mb-10">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-white text-sm"
+            style={{ background: "linear-gradient(135deg, #0F4C55, #1a6b78)" }}>S</div>
+          <span className="font-bold text-base tracking-tight" style={{ color: "#17282C" }}>HealthTwin AI</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: "rgba(15,76,85,0.1)", color: "#0F4C55", border: "1px solid rgba(15,76,85,0.2)" }}>
+            BETA
+          </span>
+        </motion.div>
+
+        {/* Hero content — vertically centered */}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-7">
+          <SamanthaOrb />
+
+          <div className="text-center max-w-md">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="text-5xl font-black leading-tight mb-3"
+              style={{ color: "#17282C", letterSpacing: "-0.02em" }}
+            >
+              Meet{" "}
+              <span className="bg-clip-text text-transparent"
+                style={{ backgroundImage: "linear-gradient(90deg, #0F4C55, #E2922F)" }}>
+                Samantha
+              </span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+              className="text-sm leading-relaxed" style={{ color: "#58686B" }}
+            >
+              Your AI-powered family health guardian. She remembers every medication,
+              catches dangerous interactions, and answers health questions in English or Bengali — instantly.
+            </motion.p>
+          </div>
+
+          {/* Stats row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+            className="flex gap-8"
+          >
+            {STATS.map((s, i) => (
+              <div key={i} className="text-center">
+                <div className="text-lg font-black" style={{ color: "#0F4C55" }}>{s.value}</div>
+                <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#8A9696" }}>{s.label}</div>
+              </div>
+            ))}
+
+          </motion.div>
+
+          {/* Feature cards 2×2 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+            className="grid grid-cols-2 gap-3 w-full max-w-md"
+          >
+            {FEATURES.map((f, i) => (
+              <motion.div key={i}
+                whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(15,76,85,0.10)" }}
+                className="flex gap-3 p-3.5 rounded-2xl cursor-default transition-all"
+                style={{
+                  background: "#FFFCF7",
+                  border: "1.5px solid rgba(23,40,44,0.08)",
+                  boxShadow: "0 2px 8px rgba(16,38,42,0.05)",
+                }}
+              >
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(15,76,85,0.08)" }}>
+                  <f.icon size={14} color="#0F4C55" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold leading-snug" style={{ color: "#17282C" }}>{f.title}</p>
+                  <p className="text-[10px] leading-relaxed mt-0.5" style={{ color: "#8A9696" }}>{f.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Footer badge */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
+          className="relative z-10 flex items-center gap-2 mt-6">
+          <Lock size={10} style={{ color: "rgba(23,40,44,0.3)" }} />
+          <span className="text-[10px]" style={{ color: "rgba(23,40,44,0.35)" }}>
+            Built for Bangladeshi families · All data encrypted · Zero third-party sharing
+          </span>
         </motion.div>
       </div>
 
-      {/* ── Family constellation ────────────────────────────────────────── */}
-      {members.length > 0 && (
-        <div className="px-6 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
-              Family
-            </h2>
-            <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
-              Tap to focus Samantha
-            </span>
-          </div>
+      {/* ── RIGHT — Auth panel ──────────────────────────────────────────────── */}
+      <div className="flex flex-col items-center justify-center px-8 py-12 relative"
+        style={{ background: "#FFFCF7", borderLeft: "1.5px solid rgba(23,40,44,0.08)" }}>
 
-          <div className="glass-card py-6 flex flex-col items-center relative overflow-hidden">
-            {/* dot grid background */}
-            <div className="absolute inset-0 dot-grid opacity-40 pointer-events-none" />
-
-            <Constellation
-              members={members}
-              focusedMember={activeMember}
-              activeMember={null}
-              selectedMembers={selectedFamilyMembers}
-              riskBands={riskBands}
-              verdict={null}
-              hero={true}
-              onSelect={(roleLabel) => toggleFamilyMember(roleLabel)}
-            />
-
-            {/* Context tray */}
-            <AnimatePresence>
-              {selectedFamilyMembers.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  className="mt-4 flex items-center gap-2 flex-wrap justify-center px-4"
-                >
-                  <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>
-                    Samantha is focused on:
-                  </span>
-                  {selectedFamilyMembers.map((rl) => {
-                    const m = members.find((x) => x.role_label === rl);
-                    return (
-                      <span
-                        key={rl}
-                        className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-                        style={{ background: "var(--primary-tint)", color: "var(--primary)" }}
-                      >
-                        {m?.display_name || rl}
-                      </span>
-                    );
-                  })}
-                  <button
-                    onClick={clearFamilySelection}
-                    className="text-[10px] font-semibold transition-opacity hover:opacity-60"
-                    style={{ color: "var(--ink-faint)" }}
-                  >
-                    Clear
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+        {/* Mobile logo */}
+        <div className="flex lg:hidden items-center gap-2 mb-8">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-white text-sm"
+            style={{ background: "linear-gradient(135deg, #0F4C55, #1a6b78)" }}>S</div>
+          <span className="font-bold" style={{ color: "#17282C" }}>HealthTwin AI</span>
         </div>
-      )}
 
-      {/* ── Insights & Actions row ──────────────────────────────────────── */}
-      <div className="px-6 grid grid-cols-1 lg:grid-cols-2 gap-4 mb-2">
-        {/* AI Insights */}
-        {displayInsights.length > 0 && (
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "var(--ink-soft)" }}>
-              Needs Attention
-            </h2>
-            <div className="flex flex-col gap-2">
-              {displayInsights.map((insight, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.07 }}
-                  className="glass-card px-4 py-3 flex items-start gap-3"
-                >
-                  <span
-                    className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${insight.severity === "HIGH" ? "animate-pulse" : ""}`}
-                    style={{ background: SEVERITY_COLOR[insight.severity] ?? "var(--info)" }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold leading-snug" style={{ color: "var(--ink)" }}>
-                      {insight.title}
-                    </p>
-                    <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: "var(--ink-soft)" }}>
-                      {insight.detail}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="w-full max-w-sm mb-6">
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+            className="text-2xl font-black mb-1.5"
+            style={{ color: "#17282C", letterSpacing: "-0.01em" }}
+          >
+            Your family's health,{" "}
+            <span className="bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(90deg, #0F4C55, #E2922F)" }}>
+              protected
+            </span>
+          </motion.h2>
+          <p className="text-sm" style={{ color: "#8A9696" }}>
+            Sign in or create an account to get started
+          </p>
+        </div>
 
-        {/* Quick actions */}
-        <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "var(--ink-soft)" }}>
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { href: "/ask",       icon: "💬", label: "Conversations",   desc: "Ask Samantha" },
-              { href: "/records",   icon: "📄", label: "Scan Document",   desc: "Upload record" },
-              { href: "/reports",   icon: "📊", label: "Reports",         desc: "Generate report" },
-              { href: "/family",    icon: "👨‍👩‍👧", label: "Family",         desc: "Manage members" },
-            ].map((a) => (
-              <Link
-                key={a.href}
-                href={a.href}
-                className="glass-card p-4 flex flex-col gap-1 hover:opacity-80 transition-opacity group"
-              >
-                <span className="text-xl">{a.icon}</span>
-                <p className="text-xs font-bold leading-snug" style={{ color: "var(--ink)" }}>
-                  {a.label}
-                </p>
-                <p className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
-                  {a.desc}
-                </p>
-              </Link>
-            ))}
-          </div>
+        <div className="w-full max-w-sm">
+          <AuthForm />
         </div>
       </div>
     </div>

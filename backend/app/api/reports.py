@@ -4,8 +4,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.graph.database import get_db
-from app.graph.models import Household
 from app.agents.report import generate_report, REPORT_TYPES
+from app.core.auth import get_current_household_id
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -17,12 +17,13 @@ class ReportRequest(BaseModel):
 
 
 @router.post("/generate")
-def generate_report_endpoint(req: ReportRequest, db: Session = Depends(get_db)):
-    hh = db.query(Household).filter(Household.name == "Rahman Family").first()
-    household_id = hh.id if hh else 1
+def generate_report_endpoint(
+    req: ReportRequest,
+    household_id: int = Depends(get_current_household_id),
+    db: Session = Depends(get_db),
+):
     report_type = req.type if req.type in REPORT_TYPES else "family_summary"
-    result = generate_report(db, household_id, report_type, req.member_id, req.language or "en")
-    return result
+    return generate_report(db, household_id, report_type, req.member_id, req.language or "en")
 
 
 @router.get("/types")

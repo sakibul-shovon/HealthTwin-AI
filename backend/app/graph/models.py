@@ -204,3 +204,14 @@ class DocChunk(Base):
     embedding = Column(JSON, nullable=True)        # JSON for dev; pgvector upgrade in E22
 
     document = relationship("Document", back_populates="chunks")
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    household_id = Column(Integer, ForeignKey("households.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    household = relationship("Household")
