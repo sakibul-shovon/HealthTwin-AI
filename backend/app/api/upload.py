@@ -7,6 +7,7 @@ from app.graph import models, crud
 from app.multimodal.extract import extract
 from app.spine.doc_retrieval import embed_and_store_document
 from app.voice.pending import _LOCK, _load, _save, _evict_expired, MAX_ENTRIES, TTL_SECONDS
+from app.core.auth import get_current_household_id
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -54,7 +55,8 @@ async def upload_document(
     file: UploadFile = File(...),
     member_id: int = Form(...),
     kind: str = Form("prescription"),
-    db: Session = Depends(get_db)
+    household_id: int = Depends(get_current_household_id),
+    db: Session = Depends(get_db),
 ):
     MAX_SIZE = 5 * 1024 * 1024 # 5MB
     file_bytes = await file.read()
@@ -65,6 +67,11 @@ async def upload_document(
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Unsupported file type")
         
+    # Verify member belongs to the authenticated household
+    owner = db.query(models.Member).filter(models.Member.id == member_id).first()
+    if not owner or owner.household_id != household_id:
+        raise HTTPException(status_code=403, detail="Member not in your household")
+
     # Extract entities
     extracted = extract(file_bytes, file.filename, kind)
 

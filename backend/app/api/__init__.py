@@ -6,6 +6,8 @@ from app.api import care
 from app.api import chat
 from app.api import emergency
 from app.api import member
+from app.api import tts
+from app.api import auth
 from app.config import settings
 
 from app.api import upload
@@ -13,8 +15,10 @@ from app.api import reports
 from app.api import insights
 
 router = APIRouter()
+router.include_router(auth.router)
 router.include_router(household.router, prefix="/household", tags=["household"])
 router.include_router(voice.router)
+router.include_router(tts.router)
 router.include_router(care.router)
 router.include_router(chat.router)
 router.include_router(emergency.router)

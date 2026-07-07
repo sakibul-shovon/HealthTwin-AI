@@ -11,13 +11,9 @@ from sqlalchemy.orm import Session, joinedload
 from app.graph.database import get_db
 from app.graph import models, schemas
 from app.spine.gate1_rules import check_drug_safety
+from app.core.auth import get_current_household_id
 
 router = APIRouter()
-
-
-def _get_household_id(db: Session) -> int:
-    hh = db.query(models.Household).first()
-    return hh.id if hh else 1
 
 _SEV_NORM = {"high": "HIGH", "moderate": "MED", "low": "LOW"}
 _SEV_ORDER = {"HIGH": 0, "MED": 1, "LOW": 2}
@@ -56,8 +52,10 @@ def _risk_band(m: models.Member) -> str:
 
 
 @router.get("")
-def get_insights(db: Session = Depends(get_db)):
-    household_id = _get_household_id(db)
+def get_insights(
+    household_id: int = Depends(get_current_household_id),
+    db: Session = Depends(get_db),
+):
     members = (
         db.query(models.Member)
         .options(

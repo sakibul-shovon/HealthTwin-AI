@@ -149,6 +149,14 @@ export interface ChatMessage {
   timestamp: number
 }
 
+export interface ChatSession {
+  id: number
+  title: string
+  created_at: string
+  updated_at: string
+  message_count: number
+}
+
 export interface HealthEvent {
   id: number;
   member_id: number;
