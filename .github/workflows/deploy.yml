@@ -24,6 +24,7 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           envs: GITHUB_TOKEN
           script: |
+            set -e
             cd ~/healthtwin-ai || (git clone https://oauth2:$GITHUB_TOKEN@github.com/${{ github.repository }}.git ~/healthtwin-ai && cd ~/healthtwin-ai)
             git config --global --add safe.directory ~/healthtwin-ai
             git remote set-url origin https://oauth2:$GITHUB_TOKEN@github.com/${{ github.repository }}.git

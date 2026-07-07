@@ -178,11 +178,21 @@ export function useVoice({
         try {
           if (genRef.current !== gen) return;
 
+          // Quick health probe — skip server TTS entirely if Kokoro isn't loaded yet
+          // so there's zero silent pause before browser TTS kicks in.
+          try {
+            const h = await fetch("/api/tts/health", { signal: AbortSignal.timeout(1_500) });
+            const hj = await h.json();
+            if (!hj.available) throw new Error("not ready");
+          } catch {
+            throw new Error("TTS server not ready");
+          }
+
           const res = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text, voice: "af_bella", speed: 1.0 }),
-            signal: AbortSignal.timeout(12_000),
+            signal: AbortSignal.timeout(8_000),
           });
 
           if (!res.ok) throw new Error(`TTS ${res.status}`);

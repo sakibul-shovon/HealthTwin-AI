@@ -96,7 +96,8 @@ from typing import Optional
 
 class UploadConfirmRequest(BaseModel):
     pending_id: str
-    edits: Optional[dict] = None # Optional user edits to the extracted data
+    edits: Optional[dict] = None
+    member_id: Optional[int] = None  # Override member assignment chosen at upload
 
 @router.post("/confirm")
 def confirm_upload(
@@ -106,8 +107,8 @@ def confirm_upload(
     pending = retrieve_upload_pending(req.pending_id)
     if not pending:
         raise HTTPException(status_code=404, detail="Pending upload not found or expired")
-        
-    member_id = pending["member_id"]
+
+    member_id = req.member_id if req.member_id is not None else pending["member_id"]
     member = db.query(models.Member).filter(models.Member.id == member_id).first()
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")

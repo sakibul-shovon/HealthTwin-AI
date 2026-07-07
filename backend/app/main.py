@@ -1,10 +1,28 @@
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from app.config import settings
 from app.api import router as api_router
 
-app = FastAPI(title="HealthTwin", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    async def _warmup():
+        # Wait for DB/router init to settle before loading heavy models
+        await asyncio.sleep(4)
+        loop = asyncio.get_running_loop()
+        try:
+            from app.api.tts import _load_pipeline_sync
+            await loop.run_in_executor(None, _load_pipeline_sync)
+        except Exception:
+            pass  # kokoro not installed or failed — handled at request time
+    asyncio.create_task(_warmup())
+    yield
+
+
+app = FastAPI(title="HealthTwin", version="0.1.0", lifespan=lifespan)
 
 # Guard: allow_credentials=True with wildcard origin is a security error
 _allowed_origins = [o for o in settings.ALLOWED_ORIGINS if o != "*"]

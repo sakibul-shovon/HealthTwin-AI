@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, MessageCircle, Users, FileText, ShieldAlert, Settings, Sun, Moon, LogOut } from "lucide-react";
+import { Home, MessageCircle, Users, FileText, ShieldAlert, Sun, Moon, LogOut, Cpu } from "lucide-react";
 import { useTwinStore } from "@/lib/store";
 import { AnimatePresence, motion } from "framer-motion";
 
 const NAV_ITEMS = [
-  { href: "/home",     label: "Home",          icon: Home },
-  { href: "/ask",      label: "Conversations", icon: MessageCircle },
-  { href: "/family",   label: "Family",        icon: Users },
-  { href: "/records",  label: "Records",       icon: FileText },
-  { href: "/emergency",label: "Emergency",     icon: ShieldAlert },
-  { href: "/settings", label: "Settings",      icon: Settings },
+  { href: "/home",      label: "Home",          icon: Home },
+  { href: "/ask",       label: "Conversations", icon: MessageCircle },
+  { href: "/family",    label: "Family",        icon: Users },
+  { href: "/records",   label: "Records",       icon: FileText },
+  { href: "/emergency", label: "Emergency",     icon: ShieldAlert },
+  { href: "/system",    label: "AI System",     icon: Cpu },
 ];
 
 const ORB_LABEL: Record<string, string> = {

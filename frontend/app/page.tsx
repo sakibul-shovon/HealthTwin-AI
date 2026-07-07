@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTwinStore } from "@/lib/store";
 import { loginUser, registerUser } from "@/lib/api";
-import { Shield, Activity, Users, Brain, Lock, ChevronRight, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Shield, Activity, Users, Brain, Lock, Eye, EyeOff, Sparkles } from "lucide-react";
 
 const FEATURES = [
   { icon: Shield,   title: "3-Gate Safety Engine",   desc: "Interaction, contraindication & allergy checks on every medication" },
@@ -92,19 +92,12 @@ function AuthForm() {
   const { setAuth } = useTwinStore();
 
   const [mode, setMode] = useState<AuthMode>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("demo@healthtwin.ai");
+  const [password, setPassword] = useState("Demo1234!");
   const [familyName, setFamilyName] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  function fillDemo() {
-    setMode("login");
-    setEmail("demo@healthtwin.ai");
-    setPassword("Demo1234!");
-    setError("");
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -146,22 +139,18 @@ function AuthForm() {
       transition={{ duration: 0.5, delay: 0.2 }}
       className="w-full"
     >
-      {/* Demo button */}
-      <motion.button
-        onClick={fillDemo}
-        whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-        className="w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all"
+      {/* Demo info banner */}
+      <div className="w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl"
         style={{
           background: "linear-gradient(135deg, rgba(226,146,47,0.1), rgba(226,146,47,0.06))",
           border: "1.5px solid rgba(226,146,47,0.35)",
-          color: "#B96D19",
         }}
       >
-        <Sparkles size={14} style={{ color: "#E2922F" }} />
-        <span className="flex-1 text-left" style={{ color: "#A86900" }}>Try the hackathon demo</span>
-        <span className="text-[10px] font-normal" style={{ color: "#B96D19", opacity: 0.75 }}>demo@healthtwin.ai · Demo1234!</span>
-        <ChevronRight size={13} style={{ color: "#B96D19", opacity: 0.6 }} />
-      </motion.button>
+        <Sparkles size={14} style={{ color: "#E2922F" }} className="shrink-0" />
+        <span className="text-sm font-semibold" style={{ color: "#A86900" }}>
+          Hackathon demo — credentials pre-filled
+        </span>
+      </div>
 
       {/* Card */}
       <div className="rounded-3xl overflow-hidden"
@@ -267,6 +256,9 @@ function AuthForm() {
 
       <p className="text-center text-[11px] mt-4" style={{ color: "rgba(23,40,44,0.3)" }}>
         Your data stays private. No data sold. Ever.
+      </p>
+      <p className="text-center text-[10px] mt-1.5" style={{ color: "rgba(226,146,47,0.6)" }}>
+        Hackathon demo account active until July 17, 2026 · SciBlitz AI Challenge
       </p>
     </motion.div>
   );

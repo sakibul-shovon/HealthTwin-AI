@@ -231,7 +231,7 @@ export async function uploadFile(file: File, memberId?: string, kind?: string) {
   }
 }
 
-export async function confirmUpload(pendingId: string, edits?: any) {
+export async function confirmUpload(pendingId: string, edits?: any, memberId?: number) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/upload/confirm`, {
       method: 'POST',
@@ -239,15 +239,16 @@ export async function confirmUpload(pendingId: string, edits?: any) {
       body: JSON.stringify({
         pending_id: pendingId,
         edits: edits || null,
+        member_id: memberId ?? null,
       }),
     });
     if (!res.ok) throw new Error('Confirm failed');
     return await res.json();
-    } catch (error) {
-      console.error('Error confirming upload:', error);
-      throw error;
-    }
+  } catch (error) {
+    console.error('Error confirming upload:', error);
+    throw error;
   }
+}
 
 export async function generateReport(
   type: string,

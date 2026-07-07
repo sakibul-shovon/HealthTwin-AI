@@ -95,3 +95,19 @@ async def synthesize(req: TTSRequest):
 async def tts_health():
     """Quick check: is Kokoro available?"""
     return {"available": _pipeline is not None, "error": _load_error}
+
+
+@router.post("/warmup")
+async def tts_warmup():
+    """
+    Called by the frontend on page mount to pre-load the Kokoro pipeline
+    so the first real TTS call is fast.  Returns immediately with current state.
+    """
+    if _pipeline is not None:
+        return {"status": "ready"}
+    if _load_error is not None:
+        return {"status": "unavailable", "error": _load_error}
+
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, _load_pipeline_sync)
+    return {"status": "loading"}

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FileText, CheckCircle, AlertTriangle } from "lucide-react";
 import { uploadFile, confirmUpload } from "@/lib/api";
 import { useTwinStore } from "@/lib/store";
 
@@ -31,50 +32,31 @@ interface UploadPreview {
 }
 
 const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploadSuccess }, ref) => {
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging]   = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [preview, setPreview] = useState<UploadPreview | null>(null);
+  const [preview, setPreview]         = useState<UploadPreview | null>(null);
   const [selectedMember, setSelectedMember] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { household, activeMember } = useTwinStore();
 
   useImperativeHandle(ref, () => ({
-    openFileDialog: () => {
-      fileInputRef.current?.click();
-    },
+    openFileDialog: () => fileInputRef.current?.click(),
   }));
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDragIn = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setIsDragging(true);
-    }
-  }, []);
-
-  const handleDragOut = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
+  const handleDrag    = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); }, []);
+  const handleDragIn  = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.items?.length) setIsDragging(true); }, []);
+  const handleDragOut = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }, []);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file) return;
     setIsUploading(true);
     try {
       const activeMemberObj = household?.members?.find((m) => m.role_label === activeMember);
-      const activeMemberId = activeMemberObj?.id?.toString() ?? household?.members?.[0]?.id.toString();
+      const activeMemberId  = activeMemberObj?.id?.toString() ?? household?.members?.[0]?.id.toString();
       const res = await uploadFile(file, activeMemberId) as UploadPreview | null;
       if (res?.pending_id) {
         setPreview(res);
-        setSelectedMember(
-          res.member_id?.toString() ?? activeMemberId ?? ""
-        );
+        setSelectedMember(res.member_id?.toString() ?? activeMemberId ?? "");
       }
     } catch {
       alert("Failed to process document. Please try again.");
@@ -84,29 +66,25 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
   }, [household, activeMember]);
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      await handleFile(e.dataTransfer.files[0]);
-    }
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+    if (e.dataTransfer.files?.length) await handleFile(e.dataTransfer.files[0]);
   }, [handleFile]);
 
   const handleConfirm = async () => {
     if (!preview || !selectedMember) return;
     setIsUploading(true);
     try {
-      const res = await confirmUpload(preview.pending_id) as { status: string } | null;
-      if (res?.status === "success") {
-        const meds = preview.extracted?.medications?.length ?? 0;
+      const res = await confirmUpload(preview.pending_id, undefined, parseInt(selectedMember)) as { status: string } | null;
+      if (res?.status === "success" || res?.status === "already_exists") {
+        const meds  = preview.extracted?.medications?.length ?? 0;
         const conds = preview.extracted?.conditions?.length ?? 0;
-        const labs = preview.extracted?.lab_values?.length ?? 0;
+        const labs  = preview.extracted?.lab_values?.length ?? 0;
         let summary = `Document saved: ${preview.filename}`;
         if (meds > 0 || conds > 0 || labs > 0) {
           const parts = [];
-          if (meds > 0) parts.push(`${meds} medication${meds > 1 ? "s" : ""}`);
+          if (meds  > 0) parts.push(`${meds} medication${meds > 1 ? "s" : ""}`);
           if (conds > 0) parts.push(`${conds} condition${conds > 1 ? "s" : ""}`);
-          if (labs > 0) parts.push(`${labs} lab value${labs > 1 ? "s" : ""}`);
+          if (labs  > 0) parts.push(`${labs} lab value${labs > 1 ? "s" : ""}`);
           summary = `Added ${parts.join(", ")} from ${preview.filename}.`;
         } else {
           summary = `Document saved (no medical data found in ${preview.filename}).`;
@@ -120,6 +98,10 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
       setIsUploading(false);
     }
   };
+
+  const medCount  = preview?.extracted?.medications?.length ?? 0;
+  const condCount = preview?.extracted?.conditions?.length ?? 0;
+  const labCount  = preview?.extracted?.lab_values?.length ?? 0;
 
   return (
     <div
@@ -138,81 +120,56 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
       />
       {children}
 
-      {/* Full screen drag overlay */}
+      {/* Drag overlay */}
       <AnimatePresence>
         {isDragging && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 z-50 flex items-center justify-center rounded-xl m-2"
-            style={{ backgroundColor: "rgba(15,76,85,0.30)", border: "2px dashed var(--accent)" }}
+            style={{ backgroundColor: "rgba(15,76,85,0.25)", border: "2px dashed var(--accent)" }}
           >
-            <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
-              <span className="text-4xl mb-2">📄</span>
-              <p className="font-bold text-gray-800">Drop document here</p>
-              <p className="text-sm text-gray-500">Prescription, lab report, or image</p>
+            <div className="bg-white px-8 py-6 rounded-2xl shadow-xl flex flex-col items-center gap-2">
+              <FileText size={32} style={{ color: "var(--primary)" }} />
+              <p className="font-bold" style={{ color: "var(--ink)" }}>Drop to scan</p>
+              <p className="text-xs" style={{ color: "var(--ink-soft)" }}>Prescription, lab report, or image</p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Processing overlay — visual scanning animation */}
+      {/* Scanning animation */}
       <AnimatePresence>
         {isUploading && !preview && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center"
-            style={{ background: "rgba(245,241,233,0.88)", backdropFilter: "blur(8px)" }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: "rgba(245,241,233,0.90)", backdropFilter: "blur(8px)" }}
           >
-            <div className="flex flex-col items-center gap-4 text-center px-8">
-              {/* Scanning icon */}
+            <div className="flex flex-col items-center gap-5 text-center px-8">
               <div className="relative w-16 h-16">
-                <div
-                  className="absolute inset-0 rounded-2xl flex items-center justify-center"
-                  style={{ background: "var(--surface)", border: "1.5px solid var(--border)", boxShadow: "var(--shadow-md)" }}
-                >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                  </svg>
+                <div className="absolute inset-0 rounded-2xl flex items-center justify-center"
+                  style={{ background: "var(--surface)", border: "1.5px solid var(--border)", boxShadow: "var(--shadow-md)" }}>
+                  <FileText size={26} style={{ color: "var(--accent)" }} />
                 </div>
-                {/* Orbit ring */}
-                <motion.div
-                  className="absolute inset-[-6px] rounded-[22px]"
+                <motion.div className="absolute inset-[-6px] rounded-[22px]"
                   style={{ border: "2px solid var(--accent)", opacity: 0.4 }}
-                  animate={{ scale: [1, 1.12, 1], opacity: [0.4, 0.8, 0.4] }}
+                  animate={{ scale: [1, 1.14, 1], opacity: [0.4, 0.9, 0.4] }}
                   transition={{ duration: 1.4, repeat: Infinity }}
                 />
               </div>
-
               <div>
-                <p className="text-sm font-bold" style={{ color: "var(--ink)" }}>
-                  Reading prescription…
-                </p>
+                <p className="text-sm font-bold" style={{ color: "var(--ink)" }}>Reading document…</p>
                 <p className="text-[11px] mt-1" style={{ color: "var(--ink-soft)" }}>
                   Extracting medications, doses &amp; conditions
                 </p>
               </div>
-
-              {/* Step indicators */}
               <div className="flex items-center gap-2">
                 {["OCR", "Parse", "Match"].map((step, i) => (
-                  <motion.div
-                    key={step}
-                    className="flex items-center gap-1.5"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.4 }}
-                  >
-                    <motion.div
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ background: "var(--accent)" }}
+                  <motion.div key={step} className="flex items-center gap-1.5"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.4 }}>
+                    <motion.div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--accent)" }}
                       animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.3 }}
-                    />
+                      transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.3 }} />
                     <span className="text-[10px] font-medium" style={{ color: "var(--ink-faint)" }}>{step}</span>
                     {i < 2 && <span style={{ color: "var(--border-bright)", fontSize: 10 }}>→</span>}
                   </motion.div>
@@ -223,104 +180,166 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
         )}
       </AnimatePresence>
 
-      {/* Preview Card */}
+      {/* Extracted data modal */}
       <AnimatePresence>
         {preview && (
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="absolute bottom-4 left-4 right-4 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
           >
-            <div className="p-4 bg-[var(--primary)] text-white flex justify-between items-center">
-              <h3 className="font-bold flex items-center gap-2">
-                <span>📄</span> Extracted Data
-              </h3>
-              <span className="text-xs opacity-80">{preview.filename}</span>
-            </div>
-
-            <div className="p-4 max-h-[50vh] overflow-y-auto">
-              {/* Non-medical warning */}
-              {preview.is_medical === false && (
-                <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm"
-                  style={{ background: "var(--watch-bg)", border: "1px solid var(--watch)", color: "var(--watch)" }}>
-                  <span className="shrink-0 mt-0.5">⚠</span>
-                  <div>
-                    <p className="font-semibold text-[13px]">No medical data found</p>
-                    <p className="text-[11px] mt-0.5 opacity-80">
-                      This document does not appear to be a prescription or lab report.
-                      The file will be saved but nothing will be added to the health profile.
-                    </p>
-                  </div>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 12 }}
+              animate={{ scale: 1,    opacity: 1, y: 0  }}
+              exit=   {{ scale: 0.95, opacity: 0, y: 12 }}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              {/* Header */}
+              <div className="px-5 py-4 flex items-center justify-between"
+                style={{ background: "var(--primary)" }}>
+                <div className="flex items-center gap-2.5">
+                  <FileText size={16} color="#fff" />
+                  <span className="font-bold text-white text-sm">Extracted Data</span>
                 </div>
-              )}
-
-              <div className="mb-4">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  Assign to Member
-                </label>
-                <select
-                  value={selectedMember}
-                  onChange={(e) => setSelectedMember(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-gray-50 text-sm outline-none focus:border-[var(--accent)]"
-                  disabled
-                >
-                  {household?.members.map((m) => (
-                    <option key={m.id} value={m.id}>{m.role_label}</option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  * Locked to member specified at upload for this demo.
-                </p>
+                <span className="text-[11px] text-white/60 font-mono truncate max-w-[160px]">
+                  {preview.filename}
+                </span>
               </div>
 
-              {(preview.extracted?.medications?.length ?? 0) > 0 && (
-                <div className="mb-3">
-                  <h4 className="text-xs font-bold text-[var(--accent)] uppercase mb-1">Medications</h4>
-                  <ul className="text-sm space-y-1">
-                    {preview.extracted!.medications!.map((med, i) => (
-                      <li key={i} className="flex justify-between bg-gray-50 p-2 rounded">
-                        <span className="font-medium text-gray-800">{med.name}</span>
-                        <span className="text-gray-500">{med.dose}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Body */}
+              <div className="px-5 py-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
 
-              {(preview.extracted?.conditions?.length ?? 0) > 0 && (
-                <div className="mb-3">
-                  <h4 className="text-xs font-bold text-[var(--urgent)] uppercase mb-1">Conditions</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {preview.extracted!.conditions!.map((c, i) => (
-                      <span key={i} className="bg-red-50 text-[var(--urgent)] text-xs px-2 py-1 rounded-full font-medium">
-                        {c}
-                      </span>
-                    ))}
+                {/* Non-medical warning */}
+                {preview.is_medical === false && (
+                  <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl"
+                    style={{ background: "var(--watch-bg)", color: "var(--watch)" }}>
+                    <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[13px] font-semibold">No medical data found</p>
+                      <p className="text-[11px] mt-0.5 opacity-80">
+                        File will be saved but nothing is added to the health profile.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
 
-            <div className="p-4 bg-gray-50 flex justify-end gap-3 border-t">
-              <button
-                onClick={() => setPreview(null)}
-                className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors"
-                disabled={isUploading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirm}
-                className="px-5 py-2 text-sm font-bold text-white rounded-xl shadow transition-transform active:scale-95 flex items-center gap-2"
-                style={{ backgroundColor: "var(--primary)" }}
-                disabled={isUploading}
-              >
-                {isUploading
-                  ? <span className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" />
-                  : preview?.is_medical === false ? "Save Document Only" : "Save to Profile"}
-              </button>
-            </div>
+                {/* Member selector */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
+                    style={{ color: "var(--ink-soft)" }}>
+                    Assign to Member
+                  </label>
+                  <select
+                    value={selectedMember}
+                    onChange={(e) => setSelectedMember(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl text-sm font-medium outline-none transition-all cursor-pointer"
+                    style={{
+                      background: "var(--surface-sunk)",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    {household?.members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.display_name ?? m.role_label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Medications */}
+                {medCount > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                      style={{ color: "var(--accent)" }}>
+                      Medications · {medCount}
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      {preview.extracted!.medications!.map((med, i) => (
+                        <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                          style={{ background: "var(--surface-sunk)" }}>
+                          <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                            {med.name}
+                          </span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg"
+                            style={{ background: "var(--primary-tint)", color: "var(--primary)" }}>
+                            {med.dose}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Conditions */}
+                {condCount > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                      style={{ color: "var(--urgent)" }}>
+                      Conditions · {condCount}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {preview.extracted!.conditions!.map((c, i) => (
+                        <span key={i} className="px-3 py-1.5 rounded-full text-[11px] font-semibold"
+                          style={{ background: "var(--urgent-bg)", color: "var(--urgent)" }}>
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Lab values */}
+                {labCount > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                      style={{ color: "var(--primary)" }}>
+                      Lab Values · {labCount}
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      {preview.extracted!.lab_values!.map((lv, i) => (
+                        <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                          style={{ background: "var(--surface-sunk)" }}>
+                          <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{lv.test}</span>
+                          <span className="text-[11px] font-bold" style={{ color: "var(--ink-soft)" }}>
+                            {lv.value} {lv.unit}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-4 flex items-center justify-end gap-3"
+                style={{ borderTop: "1px solid var(--border)", background: "var(--surface-sunk)" }}>
+                <button
+                  onClick={() => setPreview(null)}
+                  disabled={isUploading}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl transition-all hover:opacity-70 disabled:opacity-40"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  disabled={isUploading || !selectedMember}
+                  className="px-5 py-2.5 text-sm font-bold text-white rounded-xl flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                  style={{
+                    background: "linear-gradient(135deg, var(--primary), var(--primary-deep))",
+                    boxShadow: "var(--shadow-md)",
+                  }}
+                >
+                  {isUploading
+                    ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    : <><CheckCircle size={15} /> {preview?.is_medical === false ? "Save Document" : "Save to Profile"}</>
+                  }
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -329,5 +348,4 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
 });
 
 UploadDropzone.displayName = "UploadDropzone";
-
 export default UploadDropzone;

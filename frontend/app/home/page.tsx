@@ -93,6 +93,9 @@ export default function HomePage() {
   const firstName  = selfMember?.display_name?.split(" ")[0] ?? household?.name?.split(" ")[0] ?? "there";
 
   useEffect(() => {
+    // Kick off TTS warmup in background so Kokoro is ready before the user clicks "Hear briefing"
+    fetch("/api/tts/warmup", { method: "POST" }).catch(() => {});
+
     (async () => {
       const [brief, insightData] = await Promise.all([getBriefing(), getInsights()]);
       if (brief) setBriefing(brief);
