@@ -3,7 +3,6 @@ import { useTwinStore } from "@/lib/store";
 import { useVoice } from "@/hooks/useVoice";
 import { post } from "@/lib/api";
 import { ResponseEnvelope } from "@/lib/types";
-import { useRouter } from "next/navigation";
 
 export function useHealthTwinCommand() {
   const {
@@ -15,8 +14,6 @@ export function useHealthTwinCommand() {
     orbState,
     voiceEnabled,
   } = useTwinStore();
-  
-  const router = useRouter();
 
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -34,7 +31,7 @@ export function useHealthTwinCommand() {
     });
 
   const handleCommand = useCallback(
-    async (inputTranscript: string, lang: "en" | "bn", redirect: boolean = true) => {
+    async (inputTranscript: string, lang: "en" | "bn") => {
       cancelSpeech();
       if (!inputTranscript.trim()) return;
 
@@ -52,10 +49,6 @@ export function useHealthTwinCommand() {
         text: inputTranscript,
         timestamp: Date.now(),
       });
-
-      if (redirect) {
-        router.push("/ask");
-      }
 
       const { selectedFamilyMembers, currentSessionId } = useTwinStore.getState();
       const data = await post("/api/voice/command", {
@@ -116,10 +109,10 @@ export function useHealthTwinCommand() {
         setTimeout(() => setOrbState("idle"), 2000);
       }
     },
-    [setOrbState, setLastResponse, setTranscript, addMessage, router, speak, cancelSpeech, voiceEnabled, isSTTSupported, startListening, setEmergency]
+    [setOrbState, setLastResponse, setTranscript, addMessage, speak, cancelSpeech, voiceEnabled, isSTTSupported, startListening, setEmergency]
   );
 
-  function handleOrbClick() {
+  function handleOrbClick(lang: "en" | "bn" = "en") {
     cancelSpeech();
     if (speakTimeoutRef.current) {
       clearTimeout(speakTimeoutRef.current);
@@ -130,7 +123,7 @@ export function useHealthTwinCommand() {
       setOrbState("idle");
     } else {
       setOrbState("listening");
-      startListening("en");
+      startListening(lang);
     }
   }
 

@@ -60,7 +60,7 @@ export default function Constellation({
 }: Props) {
   const RADIUS = hero ? 152 : 96;
   const NODE_R = hero ? 32 : 26;             // node circle radius in px
-  const LABEL_H = hero ? 48 : 0;             // extra bottom room for role+age labels
+  const LABEL_H = hero ? 56 : 0;             // extra bottom room for role+age labels
   const SIZE = RADIUS * 2 + NODE_R * 4 + 8 + LABEL_H;  // total svg canvas
   const cx = SIZE / 2;
   const cy = SIZE / 2;
@@ -123,11 +123,11 @@ export default function Constellation({
           </radialGradient>
         </defs>
 
-        {/* Outer ring guide (faint) */}
+        {/* Outer ring guide */}
         <circle
           cx={cx} cy={cy} r={RADIUS}
           fill="none"
-          stroke="rgba(19,45,49,0.09)"
+          stroke="rgba(19,45,49,0.15)"
           strokeWidth="1"
           strokeDasharray="3 6"
         />
@@ -148,7 +148,7 @@ export default function Constellation({
               stroke={alerted ? ALERT : focused ? focusColor : c2}
               strokeWidth={focused ? 1.75 : alerted ? 1.75 : 1}
               strokeDasharray={focused ? "none" : alerted ? "4 3" : "3 5"}
-              opacity={focused ? 0.65 : alerted ? 0.6 : 0.2}
+              opacity={focused ? 0.75 : alerted ? 0.65 : 0.35}
             />
           );
         })}
@@ -316,14 +316,14 @@ export default function Constellation({
                   : alerted
                   ? "var(--watch-bg)"
                   : active
-                  ? `linear-gradient(135deg, ${c1}22, ${c2}18)`
-                  : "var(--surface)",
+                  ? `linear-gradient(135deg, ${c1}33, ${c2}22)`
+                  : `${c1}18`,
                 color: focused ? "#fff" : alerted ? "var(--watch)" : c2,
-                border: `1.5px solid ${
+                border: `2px solid ${
                   focused ? c1 :
                   alerted ? ALERT :
                   active  ? c1 :
-                  "var(--border-bright)"
+                  `${c1}55`
                 }`,
                 boxShadow: focused
                   ? `0 4px 16px ${c1}44, 0 1px 3px rgba(16,38,42,0.12)`
@@ -360,14 +360,24 @@ export default function Constellation({
             )}
 
             {/* Name label below node */}
-            <div className="flex flex-col items-center mt-1.5" style={{ width: 64, marginLeft: -(64 - D) / 2 }}>
+            <div
+              className="flex flex-col items-center mt-2"
+              style={{ width: hero ? 72 : 60, marginLeft: -(( hero ? 72 : 60) - D) / 2 }}
+            >
               <span
-                className="text-[11px] font-semibold leading-tight text-center"
-                style={{ color: focused ? c2 : "var(--ink)" }}
+                className="font-bold leading-tight text-center"
+                style={{
+                  fontSize: hero ? 13 : 11,
+                  color: focused ? c2 : "var(--ink)",
+                  letterSpacing: "-0.01em",
+                }}
               >
                 {m.role_label}
               </span>
-              <span className="text-[9px] text-center" style={{ color: "var(--ink-soft)" }}>
+              <span
+                className="text-center font-medium mt-0.5"
+                style={{ fontSize: hero ? 11 : 9, color: "var(--ink-soft)" }}
+              >
                 {m.age}y
               </span>
             </div>

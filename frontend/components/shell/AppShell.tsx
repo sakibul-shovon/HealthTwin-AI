@@ -7,6 +7,7 @@ import SamanthaBar from "@/components/SamanthaBar";
 import { useTwinStore } from "@/lib/store";
 import { VoiceCommandProvider } from "@/lib/VoiceCommandContext";
 import EmergencyMode from "@/components/EmergencyMode";
+import VoiceOverlay from "@/components/VoiceOverlay";
 import { postCareNotify, getHousehold, getChatHistory } from "@/lib/api";
 
 function ShellInner({ children }: { children: React.ReactNode }) {
@@ -18,7 +19,6 @@ function ShellInner({ children }: { children: React.ReactNode }) {
     setHousehold,
     setMessages,
     setLastResponse,
-    theme,
     setTheme,
   } = useTwinStore();
 
@@ -89,6 +89,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
       </div>
 
       <EmergencyMode onAction={handleAction} />
+      <VoiceOverlay />
 
       {/* Toast notifications */}
       {notifications.length > 0 && (

@@ -38,7 +38,7 @@ export default function SamanthaBar() {
     household,
   } = useTwinStore();
 
-  const { handleCommand, handleOrbClick, isListening, isSTTSupported } = useVoiceCommand();
+  const { handleCommand, handleMicClick, isListening, isSTTSupported } = useVoiceCommand();
 
   const [showText, setShowText] = useState(false);
   const [text, setText] = useState("");
@@ -54,7 +54,7 @@ export default function SamanthaBar() {
   function handleSubmit() {
     const trimmed = text.trim();
     if (!trimmed) return;
-    handleCommand(trimmed, lang, true);
+    handleCommand(trimmed, lang);
     setText("");
     setShowText(false);
   }
@@ -136,7 +136,7 @@ export default function SamanthaBar() {
 
         {/* ── Mic orb button ── */}
         <motion.button
-          onClick={handleOrbClick}
+          onClick={() => handleMicClick(lang)}
           disabled={!isSTTSupported}
           className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40"
           style={{ background: cfg.orbBg, boxShadow: isActive ? `0 2px 12px ${cfg.ringColor}` : "none" }}
@@ -212,19 +212,15 @@ export default function SamanthaBar() {
           </AnimatePresence>
         </div>
 
-        {/* Lang toggle (text mode only) */}
-        <AnimatePresence>
-          {showText && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
-              onClick={() => setLang(lang === "en" ? "bn" : "en")}
-              className="shrink-0 text-[10px] font-bold px-1.5 py-1 rounded-lg"
-              style={{ background: lang === "bn" ? "var(--accent)" : "var(--surface-sunk)", color: lang === "bn" ? "var(--primary-deep)" : "var(--ink-soft)" }}
-            >
-              {lang === "en" ? "EN" : "বাং"}
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {/* Lang toggle — always visible, controls both voice and text */}
+        <motion.button
+          onClick={() => setLang(lang === "en" ? "bn" : "en")}
+          className="shrink-0 text-[10px] font-bold px-1.5 py-1 rounded-lg transition-all"
+          style={{ background: lang === "bn" ? "var(--accent-tint)" : "var(--surface-sunk)", color: lang === "bn" ? "var(--accent-deep)" : "var(--ink-soft)" }}
+          title={lang === "en" ? "Switch to Bengali" : "Switch to English"}
+        >
+          {lang === "en" ? "EN" : "বাং"}
+        </motion.button>
 
         {/* Send button (text mode + has text) */}
         <AnimatePresence>
