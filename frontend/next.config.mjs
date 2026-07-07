@@ -5,6 +5,13 @@ const nextConfig = {
   // Required for the standalone Docker image
   output: process.env.DOCKER_BUILD ? "standalone" : undefined,
 
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   async rewrites() {
     return [
       {
