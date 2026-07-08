@@ -14,7 +14,7 @@ export default function Loading() {
       {/* Constellation skeleton */}
       <div className="h-56 w-full rounded-2xl" style={{ background: "var(--surface-sunk)" }} />
       {/* Two columns */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="h-20 rounded-2xl" style={{ background: "var(--surface-sunk)" }} />
         <div className="h-20 rounded-2xl" style={{ background: "var(--surface-sunk)" }} />
         <div className="h-20 rounded-2xl" style={{ background: "var(--surface-sunk)" }} />

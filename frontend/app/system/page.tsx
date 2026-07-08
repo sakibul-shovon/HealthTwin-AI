@@ -204,7 +204,7 @@ export default function SystemPage() {
         </motion.div>
 
         {/* ── Safety Spine + Brain Tools ───────────────────────────────────── */}
-        <motion.div {...fadeUp(0.12)} className="grid grid-cols-2 gap-4">
+        <motion.div {...fadeUp(0.12)} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
           {/* Safety Spine */}
           <div className="flex flex-col gap-0">
@@ -242,7 +242,7 @@ export default function SystemPage() {
                 animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }}>
                 <Brain size={12} style={{ color: PETROL }} />
               </motion.div>
-              <div className="grid grid-cols-2 gap-1.5 mt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1">
                 <ToolChip icon={Users}        label="Member info"      color={BLUE}   />
                 <ToolChip icon={Shield}       label="Drug safety"      color={RED}    />
                 <ToolChip icon={Search}       label="Medical search"   color={ACCENT} />
@@ -265,7 +265,7 @@ export default function SystemPage() {
             style={{ color: "var(--ink-soft)" }}>
             AI Features
           </p>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <FeatureCard icon={Eye}  title="Vision OCR" color={BLUE}
               tags={["Llama 4 Scout", "base64", "prescriptions", "PDFs"]} />
             <FeatureCard icon={FlaskConical} title="Pattern Detection" color={PURPLE}

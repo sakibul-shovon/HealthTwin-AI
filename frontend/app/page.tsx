@@ -335,7 +335,7 @@ export default function LandingPage() {
           {/* Feature cards 2×2 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-            className="grid grid-cols-2 gap-3 w-full max-w-md"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md"
           >
             {FEATURES.map((f, i) => (
               <motion.div key={i}

@@ -159,7 +159,7 @@ export default function HomePage() {
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: "radial-gradient(ellipse at top left, rgba(15,76,85,0.06) 0%, transparent 60%)" }} />
 
-          <div className="flex items-center gap-5 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-5 relative z-10">
 
             {/* S avatar */}
             <motion.div
@@ -180,7 +180,7 @@ export default function HomePage() {
             </div>
 
             {/* Vertical divider */}
-            <div className="w-px h-10 shrink-0" style={{ background: "var(--border)" }} />
+            <div className="hidden md:block w-px h-10 shrink-0" style={{ background: "var(--border)" }} />
 
             {/* Stat chips */}
             <div className="flex items-center gap-2 flex-1 flex-wrap">
@@ -227,7 +227,7 @@ export default function HomePage() {
             </div>
 
             {/* Voice + Continue buttons */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap md:flex-nowrap items-center gap-2 shrink-0 mt-2 md:mt-0">
               {briefing && (
                 <button
                   onClick={isPlaying ? stopGreeting : playGreeting}
@@ -256,14 +256,14 @@ export default function HomePage() {
       </div>
 
       {/* ── Two-column bottom ───────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 grid grid-cols-2 gap-4 px-6 pb-5 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-2 gap-4 px-6 pb-5 lg:overflow-hidden overflow-y-auto">
 
         {/* LEFT: Family constellation */}
         <motion.div
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="glass-card flex flex-col relative overflow-hidden"
+          className="glass-card flex flex-col relative lg:overflow-hidden min-h-[320px] lg:min-h-0 shrink-0"
         >
           <div className="absolute inset-0 dot-grid opacity-40 pointer-events-none" />
           <div className="absolute inset-0 pointer-events-none"
@@ -322,7 +322,7 @@ export default function HomePage() {
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.25 }}
-          className="flex flex-col gap-3 min-h-0 overflow-hidden"
+          className="flex flex-col gap-3 min-h-0 lg:overflow-hidden shrink-0"
         >
           <p className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: "var(--ink-soft)" }}>
             Quick Actions
