@@ -44,33 +44,40 @@ jobs:
               PG_PASS="postgres"
             fi
             echo "POSTGRES_PASSWORD=$PG_PASS" >> .env
-            # Write DATABASE_URL explicitly so it always matches POSTGRES_PASSWORD
             echo "DATABASE_URL=postgresql://postgres:$PG_PASS@db:5432/healthtwin" >> .env
 
             # ── Rebuild and start ──
             docker compose -f docker-compose.prod.yml up -d --build
 
-            # ── Sync DB password to match what backend uses ──
+            # ── Sync DB password: run as OS postgres user to bypass login restriction ──
             sleep 8
-            docker compose -f docker-compose.prod.yml exec -T db \
-              psql -U postgres -c "ALTER USER postgres WITH PASSWORD '$PG_PASS';" || true
+            docker compose -f docker-compose.prod.yml exec -T -u postgres db \
+              psql -c "ALTER USER postgres WITH LOGIN PASSWORD '$PG_PASS';" || true
 
-            # ── Health check: wait up to 60s for backend to be ready ──
+            # ── Health check: use Python (no curl in slim image) ──
             echo "Waiting for backend health check..."
             for i in $(seq 1 12); do
               STATUS=$(docker compose -f docker-compose.prod.yml exec -T backend \
-                curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health 2>/dev/null || echo "000")
+                python -c "
+import urllib.request, sys
+try:
+    r = urllib.request.urlopen('http://localhost:8000/health', timeout=4)
+    print(r.getcode())
+except Exception as e:
+    print('000')
+" 2>/dev/null || echo "000")
+              STATUS=$(echo "$STATUS" | tr -d '[:space:]')
               if [ "$STATUS" = "200" ]; then
                 echo "Backend is healthy (attempt $i)"
                 break
               fi
-              echo "Attempt $i: backend not ready yet (status=$STATUS), retrying in 5s..."
+              echo "Attempt $i: not ready (status=$STATUS), retrying in 5s..."
               sleep 5
             done
 
-            # ── Print backend logs if health check never passed ──
+            # ── Print logs and fail if backend never became healthy ──
             if [ "$STATUS" != "200" ]; then
-              echo "ERROR: Backend failed health check after 60s. Last 80 log lines:"
+              echo "ERROR: Backend failed health check. Last 80 log lines:"
               docker compose -f docker-compose.prod.yml logs backend --tail=80
               exit 1
             fi
