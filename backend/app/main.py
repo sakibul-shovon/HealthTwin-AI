@@ -6,7 +6,6 @@ from datetime import datetime
 from app.config import settings
 from app.api import router as api_router
 from fastapi.responses import JSONResponse
-import traceback
 from fastapi import Request
 
 
@@ -29,17 +28,21 @@ app = FastAPI(title="HealthTwin", version="0.1.0", lifespan=lifespan)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    import logging
+    logging.getLogger("healthtwin").error("Unhandled error on %s %s: %s", request.method, request.url, exc, exc_info=exc)
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "traceback": traceback.format_exc()}
+        content={"detail": "Internal Server Error"},
     )
 
-# Guard: allow_credentials=True with wildcard origin is a security error
-_allowed_origins = [o for o in settings.ALLOWED_ORIGINS if o != "*"]
+# Wildcard "*" with allow_credentials=True is a CORS security error.
+# When "*" is configured, allow all origins but without credentials header.
+_has_wildcard = "*" in settings.ALLOWED_ORIGINS
+_allowed_origins = settings.ALLOWED_ORIGINS if not _has_wildcard else ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
-    allow_credentials=True,
+    allow_credentials=not _has_wildcard,
     allow_methods=["*"],
     allow_headers=["*"],
 )

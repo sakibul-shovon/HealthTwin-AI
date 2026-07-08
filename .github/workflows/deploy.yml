@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main # Or master, depending on your default branch name
+      - main
 
 jobs:
   deploy:
@@ -31,24 +31,49 @@ jobs:
             git remote set-url origin https://oauth2:$GITHUB_TOKEN@github.com/${{ github.repository }}.git
             git fetch origin main
             git reset --hard origin/main
-            
-            # Safely create or append to .env without overwriting existing manual entries
+
+            # ── .env: update secrets without touching other manual entries ──
             touch .env
-            # Remove old GROQ_API_KEY and POSTGRES_PASSWORD if they exist to update them
             sed -i '/^GROQ_API_KEY=/d' .env
             sed -i '/^POSTGRES_PASSWORD=/d' .env
+            sed -i '/^DATABASE_URL=/d' .env
             echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
             if [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
-              echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+              PG_PASS="${{ secrets.POSTGRES_PASSWORD }}"
+            else
+              PG_PASS="postgres"
             fi
-            
-            # Rebuild and restart containers in detached mode
+            echo "POSTGRES_PASSWORD=$PG_PASS" >> .env
+            # Write DATABASE_URL explicitly so it always matches POSTGRES_PASSWORD
+            echo "DATABASE_URL=postgresql://postgres:$PG_PASS@db:5432/healthtwin" >> .env
+
+            # ── Rebuild and start ──
             docker compose -f docker-compose.prod.yml up -d --build
-            
-            # Wait a few seconds for the DB to be ready, then forcefully reset the postgres password to match the default
-            # This ensures that if the password was previously set to something else, it will sync up
-            sleep 5
-            docker compose -f docker-compose.prod.yml exec -T db psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'postgres';" || true
-            
-            # Optional: Clean up old, unused images to save space
+
+            # ── Sync DB password to match what backend uses ──
+            sleep 8
+            docker compose -f docker-compose.prod.yml exec -T db \
+              psql -U postgres -c "ALTER USER postgres WITH PASSWORD '$PG_PASS';" || true
+
+            # ── Health check: wait up to 60s for backend to be ready ──
+            echo "Waiting for backend health check..."
+            for i in $(seq 1 12); do
+              STATUS=$(docker compose -f docker-compose.prod.yml exec -T backend \
+                curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health 2>/dev/null || echo "000")
+              if [ "$STATUS" = "200" ]; then
+                echo "Backend is healthy (attempt $i)"
+                break
+              fi
+              echo "Attempt $i: backend not ready yet (status=$STATUS), retrying in 5s..."
+              sleep 5
+            done
+
+            # ── Print backend logs if health check never passed ──
+            if [ "$STATUS" != "200" ]; then
+              echo "ERROR: Backend failed health check after 60s. Last 80 log lines:"
+              docker compose -f docker-compose.prod.yml logs backend --tail=80
+              exit 1
+            fi
+
+            # ── Cleanup old images ──
             docker image prune -f
