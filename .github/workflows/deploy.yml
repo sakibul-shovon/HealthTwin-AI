@@ -35,9 +35,13 @@ jobs:
             # ── .env: update secrets without touching other manual entries ──
             touch .env
             sed -i '/^GROQ_API_KEY=/d' .env
+            sed -i '/^GROQ_API_KEYS=/d' .env
             sed -i '/^POSTGRES_PASSWORD=/d' .env
             sed -i '/^DATABASE_URL=/d' .env
             echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
+            if [ -n "${{ secrets.GROQ_API_KEYS }}" ]; then
+              echo "GROQ_API_KEYS=${{ secrets.GROQ_API_KEYS }}" >> .env
+            fi
             if [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
               PG_PASS="${{ secrets.POSTGRES_PASSWORD }}"
             else
@@ -58,14 +62,8 @@ jobs:
             echo "Waiting for backend health check..."
             for i in $(seq 1 12); do
               STATUS=$(docker compose -f docker-compose.prod.yml exec -T backend \
-                python -c "
-import urllib.request, sys
-try:
-    r = urllib.request.urlopen('http://localhost:8000/health', timeout=4)
-    print(r.getcode())
-except Exception as e:
-    print('000')
-" 2>/dev/null || echo "000")
+                python -c "import urllib.request; r=urllib.request.urlopen('http://localhost:8000/health',timeout=4); print(r.getcode())" \
+                2>/dev/null || echo "000")
               STATUS=$(echo "$STATUS" | tr -d '[:space:]')
               if [ "$STATUS" = "200" ]; then
                 echo "Backend is healthy (attempt $i)"
