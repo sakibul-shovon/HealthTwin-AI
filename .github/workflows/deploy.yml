@@ -45,5 +45,10 @@ jobs:
             # Rebuild and restart containers in detached mode
             docker compose -f docker-compose.prod.yml up -d --build
             
+            # Wait a few seconds for the DB to be ready, then forcefully reset the postgres password to match the default
+            # This ensures that if the password was previously set to something else, it will sync up
+            sleep 5
+            docker compose -f docker-compose.prod.yml exec -T db psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'postgres';" || true
+            
             # Optional: Clean up old, unused images to save space
             docker image prune -f
