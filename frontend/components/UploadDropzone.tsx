@@ -58,8 +58,8 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
         setPreview(res);
         setSelectedMember(res.member_id?.toString() ?? activeMemberId ?? "");
       }
-    } catch {
-      alert("Failed to process document. Please try again.");
+    } catch (err: any) {
+      alert(err?.message || "Failed to process document. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -116,7 +116,7 @@ const UploadDropzone = forwardRef<UploadDropzoneRef, Props>(({ children, onUploa
         ref={fileInputRef}
         onChange={(e) => e.target.files && handleFile(e.target.files[0])}
         className="hidden"
-        accept="image/*,application/pdf"
+        accept="image/jpeg,image/jpg,image/png,application/pdf"
       />
       {children}
 

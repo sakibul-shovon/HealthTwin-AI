@@ -122,7 +122,13 @@ def _instruction(kind: str) -> str:
 def _extract_image(file_bytes: bytes, filename: str, kind: str = "") -> Dict[str, Any]:
     if not settings.GROQ_API_KEY:
         return _empty("No API key configured — cannot read the document.")
-    mime = "image/png" if (filename or "").lower().endswith(".png") else "image/jpeg"
+    name_l = (filename or "").lower()
+    if name_l.endswith(".png"):
+        mime = "image/png"
+    elif name_l.endswith(".webp"):
+        mime = "image/webp"
+    else:
+        mime = "image/jpeg"
     b64 = base64.b64encode(file_bytes).decode("ascii")
     data_uri = f"data:{mime};base64,{b64}"
     try:

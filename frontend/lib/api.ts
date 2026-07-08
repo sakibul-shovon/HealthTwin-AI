@@ -223,7 +223,10 @@ export async function uploadFile(file: File, memberId?: string, kind?: string) {
       headers: authHeaders(),
       body: formData,
     });
-    if (!res.ok) throw new Error('Upload failed');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || 'Upload failed');
+    }
     return await res.json();
   } catch (error) {
     console.error('Error uploading file:', error);

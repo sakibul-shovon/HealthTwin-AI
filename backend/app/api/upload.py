@@ -63,9 +63,9 @@ async def upload_document(
     if len(file_bytes) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="File too large")
         
-    allowed_types = ["image/jpeg", "image/png", "application/pdf"]
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}. Please upload a JPG, PNG, or PDF.")
         
     # Verify member belongs to the authenticated household
     owner = db.query(models.Member).filter(models.Member.id == member_id).first()
