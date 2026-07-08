@@ -31,8 +31,15 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             
-            # Export the Groq key to a local .env for docker-compose to use
-            echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" > .env
+            # Safely create or append to .env without overwriting existing manual entries
+            touch .env
+            # Remove old GROQ_API_KEY and POSTGRES_PASSWORD if they exist to update them
+            sed -i '/^GROQ_API_KEY=/d' .env
+            sed -i '/^POSTGRES_PASSWORD=/d' .env
+            echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
+            if [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
+              echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            fi
             
             # Rebuild and restart containers in detached mode
             docker compose -f docker-compose.prod.yml up -d --build
