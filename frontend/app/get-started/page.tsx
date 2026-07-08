@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import PageHeader from "@/components/shell/PageHeader";
 import {
   Pill, ShieldAlert, Mic, FileText, Activity, BarChart2,
-  ArrowRight, Sparkles, MessageCircle, ChevronRight,
+  ArrowRight, MessageCircle, ChevronRight, AlertTriangle, Heart, Target,
 } from "lucide-react";
 
 const FEATURES = [
@@ -85,6 +85,33 @@ const QUICK_COMMANDS = [
   { text: "Give me a summary of our family health", lang: "EN" },
 ];
 
+const MISSION_ITEMS = [
+  {
+    icon: AlertTriangle,
+    color: "var(--urgent)",
+    bg: "var(--urgent-bg)",
+    label: "The Problem",
+    title: "Healthcare out of reach",
+    desc: "70% of Bangladesh families have no nearby doctor. Medication errors and late diagnoses cause silent harm every day.",
+  },
+  {
+    icon: Heart,
+    color: "var(--primary)",
+    bg: "var(--primary-tint)",
+    label: "Our Mission",
+    title: "AI guardian for every family",
+    desc: "Instant drug-safety checks, symptom triage, and bilingual medical guidance — 24/7, free, no doctor needed.",
+  },
+  {
+    icon: Target,
+    color: "var(--well)",
+    bg: "var(--well-bg)",
+    label: "Our Vision",
+    title: "Zero preventable errors",
+    desc: "A future where no Bangladeshi family loses someone to a medication mistake or a condition caught too late.",
+  },
+];
+
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   show: (i: number) => ({
@@ -116,12 +143,43 @@ export default function GetStartedPage() {
             className="absolute right-0 top-0 w-48 h-48 rounded-full pointer-events-none"
             style={{ background: "var(--accent)", opacity: 0.08, transform: "translate(35%,-35%)" }}
           />
-          <Sparkles size={22} color="var(--accent)" className="mb-3" />
           <h2 className="text-xl font-black text-white mb-1.5">How to use Samantha</h2>
           <p className="text-sm text-white/65 max-w-md leading-relaxed">
             Tap the mic at the bottom of any page and speak — or type. Below are the six most powerful things Samantha can do for your family.
           </p>
         </motion.div>
+
+        {/* Mission · Vision · Problem */}
+        <div>
+          <h3 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--ink-soft)" }}>
+            Our Purpose
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {MISSION_ITEMS.map((item, i) => (
+              <motion.div
+                key={item.label}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + i * 0.08, type: "spring", stiffness: 260, damping: 22 }}
+                className="rounded-2xl p-5"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: item.bg }}>
+                  <item.icon size={16} style={{ color: item.color }} />
+                </div>
+                <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: item.color }}>
+                  {item.label}
+                </p>
+                <h4 className="text-[14px] font-bold mb-1.5 leading-snug" style={{ color: "var(--ink)" }}>
+                  {item.title}
+                </h4>
+                <p className="text-[12px] leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                  {item.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
 
         {/* Feature cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -198,7 +256,7 @@ export default function GetStartedPage() {
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + i * 0.05 }}
-                onClick={() => router.push("/ask")}
+                onClick={() => router.push(`/ask?q=${encodeURIComponent(cmd.text)}`)}
                 className="flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all hover:scale-[1.01] active:scale-[0.99] group"
                 style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
               >

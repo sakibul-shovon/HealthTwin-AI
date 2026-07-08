@@ -236,6 +236,13 @@ export default function ConversationsPage() {
   // Load session list on mount
   useEffect(() => { getSessions().then(setSessions); }, []);
 
+  // Pre-fill from ?q= param (e.g. quick commands on Get Started page)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    if (q && q.trim()) setText(q.trim());
+  }, []);
+
   // Auto-scroll
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, orbState]);
 

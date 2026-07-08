@@ -13,7 +13,7 @@ import json
 import base64
 from typing import Dict, Any
 
-from app.config import settings
+from app import groq_pool
 
 VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 # Text-structuring fallback chain — each Groq model has its own daily quota, so if
@@ -120,7 +120,7 @@ def _instruction(kind: str) -> str:
 
 
 def _extract_image(file_bytes: bytes, filename: str, kind: str = "") -> Dict[str, Any]:
-    if not settings.GROQ_API_KEY:
+    if not groq_pool.has_keys():
         return _empty("No API key configured — cannot read the document.")
     name_l = (filename or "").lower()
     if name_l.endswith(".png"):
@@ -132,8 +132,7 @@ def _extract_image(file_bytes: bytes, filename: str, kind: str = "") -> Dict[str
     b64 = base64.b64encode(file_bytes).decode("ascii")
     data_uri = f"data:{mime};base64,{b64}"
     try:
-        from groq import Groq
-        client = Groq(api_key=settings.GROQ_API_KEY)
+        client = groq_pool.get_client()
         resp = client.chat.completions.create(
             model=VISION_MODEL,
             messages=[{
@@ -163,31 +162,36 @@ def _pdf_text(file_bytes: bytes) -> str:
 
 
 def _structure_text(raw_text: str, kind: str = "") -> Dict[str, Any]:
-    if not settings.GROQ_API_KEY:
+    if not groq_pool.has_keys():
         return _empty("No API key configured — cannot structure the document.", raw_text=raw_text)
-    from groq import Groq, RateLimitError
-    client = Groq(api_key=settings.GROQ_API_KEY)
+    from groq import RateLimitError
     last_err = "unknown error"
-    for model in STRUCTURE_MODELS:
-        try:
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": _instruction(kind)},
-                    {"role": "user", "content": raw_text[:6000]},
-                ],
-                temperature=0,
-                response_format={"type": "json_object"},
-                max_tokens=800,
-            )
-            data = _parse_json_loose(resp.choices[0].message.content or "")
-            return _coerce_result(data, raw_text=raw_text)
-        except RateLimitError:
-            last_err = "all models rate-limited"
-            continue  # this model's daily quota is spent — try the next
-        except Exception as e:
-            last_err = type(e).__name__
-            continue
+    keys_tried = 0
+    while keys_tried < groq_pool.key_count():
+        client = groq_pool.get_client()
+        for model in STRUCTURE_MODELS:
+            try:
+                resp = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": _instruction(kind)},
+                        {"role": "user", "content": raw_text[:6000]},
+                    ],
+                    temperature=0,
+                    response_format={"type": "json_object"},
+                    max_tokens=800,
+                )
+                data = _parse_json_loose(resp.choices[0].message.content or "")
+                return _coerce_result(data, raw_text=raw_text)
+            except RateLimitError:
+                last_err = "rate limited"
+                continue
+            except Exception as e:
+                last_err = type(e).__name__
+                continue
+        # All models failed for this key — rotate to the next
+        groq_pool.rotate()
+        keys_tried += 1
     return _empty(f"Could not structure the document ({last_err}).", raw_text=raw_text)
 
 

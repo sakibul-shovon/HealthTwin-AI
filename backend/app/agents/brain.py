@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session, joinedload
 from groq import Groq, RateLimitError, APIError
 
 from app.config import settings
+from app import groq_pool
 from app.graph.models import Member
 from app.graph.crud import resolve_member
 from app.agents.safety import run_safety_check
@@ -50,17 +51,26 @@ class AllModelsRateLimited(Exception):
 
 
 def _chat(client: Groq, **kwargs):
-    """Call Groq, rolling through BRAIN_MODELS on rate-limit/transient errors."""
+    """Call Groq, rolling through BRAIN_MODELS then API keys on rate-limit errors."""
     last_exc: Exception | None = None
-    for model in BRAIN_MODELS:
-        try:
-            return client.chat.completions.create(model=model, **kwargs)
-        except RateLimitError as e:
-            last_exc = e
-            continue  # this model's daily quota is spent — try the next
-        except APIError as e:
-            last_exc = e
-            continue
+    keys_tried = 0
+    current_client = client
+
+    while keys_tried < groq_pool.key_count():
+        for model in BRAIN_MODELS:
+            try:
+                return current_client.chat.completions.create(model=model, **kwargs)
+            except RateLimitError as e:
+                last_exc = e
+                continue
+            except APIError as e:
+                last_exc = e
+                continue
+        # All models exhausted for this key — rotate to the next API key and retry
+        groq_pool.rotate()
+        current_client = groq_pool.get_client()
+        keys_tried += 1
+
     if isinstance(last_exc, RateLimitError):
         raise AllModelsRateLimited() from last_exc
     raise last_exc if last_exc else RuntimeError("No model available")
@@ -375,7 +385,7 @@ def run_brain(db: Session, household_id: int, user_message: str, language: str,
     """
     history: list of {"role": "user"|"assistant", "content": str} oldest→newest.
     """
-    if not settings.GROQ_API_KEY:
+    if not groq_pool.has_keys():
         return _info_envelope(
             "AI is not configured (missing API key). Please set GROQ_API_KEY.",
             language, verdict="REFUSE", title="Not Configured")
@@ -404,7 +414,7 @@ def run_brain(db: Session, household_id: int, user_message: str, language: str,
         messages.extend(history[-20:])
     messages.append({"role": "user", "content": user_message})
 
-    client = Groq(api_key=settings.GROQ_API_KEY)
+    client = groq_pool.get_client()
 
     try:
         first = _chat(

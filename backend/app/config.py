@@ -3,6 +3,7 @@ from typing import List
 
 class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
+    GROQ_API_KEYS: str = ""  # Comma-separated additional keys for rotation
     # Optional: force a specific Groq model for the brain (tried before the fallback chain).
     GROQ_BRAIN_MODEL: str = ""
     DATABASE_URL: str = "postgresql://postgres:postgres@127.0.0.1:5433/healthtwin"
