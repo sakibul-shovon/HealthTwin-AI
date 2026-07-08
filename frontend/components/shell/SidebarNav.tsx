@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, MessageCircle, Users, FileText, ShieldAlert, Sun, Moon, LogOut, Cpu } from "lucide-react";
+import { Home, MessageCircle, Users, FileText, ShieldAlert, Sun, Moon, LogOut, Cpu, Sparkles } from "lucide-react";
 import { useTwinStore } from "@/lib/store";
 import { AnimatePresence, motion } from "framer-motion";
 
 const NAV_ITEMS = [
-  { href: "/home",      label: "Home",          icon: Home },
-  { href: "/ask",       label: "Conversations", icon: MessageCircle },
-  { href: "/family",    label: "Family",        icon: Users },
-  { href: "/records",   label: "Records",       icon: FileText },
-  { href: "/emergency", label: "Emergency",     icon: ShieldAlert },
-  { href: "/system",    label: "AI System",     icon: Cpu },
+  { href: "/get-started", label: "Get Started", icon: Sparkles, highlight: true },
+  { href: "/home",        label: "Home",          icon: Home },
+  { href: "/ask",         label: "Conversations", icon: MessageCircle },
+  { href: "/family",      label: "Family",        icon: Users },
+  { href: "/records",     label: "Records",       icon: FileText },
+  { href: "/emergency",   label: "Emergency",     icon: ShieldAlert },
+  { href: "/system",      label: "AI System",     icon: Cpu },
 ];
 
 const ORB_LABEL: Record<string, string> = {
@@ -55,15 +56,21 @@ export default function SidebarNav() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-1 flex flex-col gap-0.5 overflow-y-auto custom-scrollbar">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.map((item, idx) => {
           const isEmergency = item.href === "/emergency";
+          const isHighlight = (item as any).highlight;
           const active = pathname === item.href || (item.href !== "/home" && pathname.startsWith(item.href));
           return (
             <Link key={item.href} href={item.href}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
               style={{
-                background: active ? (isEmergency ? "var(--urgent-bg)" : "var(--primary-tint)") : "transparent",
-                color: active ? (isEmergency ? "var(--urgent)" : "var(--primary)") : isEmergency ? "var(--urgent)" : "var(--ink-soft)",
+                background: active
+                  ? isHighlight ? "var(--accent-tint)" : isEmergency ? "var(--urgent-bg)" : "var(--primary-tint)"
+                  : isHighlight ? "var(--accent-tint)" : "transparent",
+                color: active
+                  ? isHighlight ? "var(--accent-deep)" : isEmergency ? "var(--urgent)" : "var(--primary)"
+                  : isHighlight ? "var(--accent)" : isEmergency ? "var(--urgent)" : "var(--ink-soft)",
+                marginBottom: idx === 0 ? "4px" : undefined,
               }}
             >
               <item.icon size={17} strokeWidth={active ? 2.2 : 1.8} />

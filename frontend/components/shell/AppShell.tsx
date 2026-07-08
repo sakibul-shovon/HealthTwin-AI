@@ -8,6 +8,7 @@ import { useTwinStore } from "@/lib/store";
 import { VoiceCommandProvider } from "@/lib/VoiceCommandContext";
 import EmergencyMode from "@/components/EmergencyMode";
 import VoiceOverlay from "@/components/VoiceOverlay";
+import WelcomeModal from "@/components/WelcomeModal";
 import { postCareNotify, getHousehold, getChatHistory } from "@/lib/api";
 
 function ShellInner({ children }: { children: React.ReactNode }) {
@@ -90,6 +91,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
       <EmergencyMode onAction={handleAction} />
       <VoiceOverlay />
+      <WelcomeModal />
 
       {/* Toast notifications */}
       {notifications.length > 0 && (
