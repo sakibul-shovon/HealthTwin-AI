@@ -5,6 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from app.config import settings
 from app.api import router as api_router
+from fastapi.responses import JSONResponse
+import traceback
+from fastapi import Request
 
 
 @asynccontextmanager
@@ -23,6 +26,13 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="HealthTwin", version="0.1.0", lifespan=lifespan)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "traceback": traceback.format_exc()}
+    )
 
 # Guard: allow_credentials=True with wildcard origin is a security error
 _allowed_origins = [o for o in settings.ALLOWED_ORIGINS if o != "*"]
