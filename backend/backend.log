@@ -1,6 +1,231 @@
-INFO:     Started server process [8544]
+INFO:     Will watch for changes in these directories: ['d:\\Projects\\HealthTwin AI\\backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [19896] using WatchFiles
+INFO:     Started server process [11132]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-ERROR:    [Errno 10048] error while attempting to bind on address ('127.0.0.1', 8000): [winerror 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:62299 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56394 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49732 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61640 - "GET /api/household/risk-scan HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52072 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63903 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54083 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49901 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57538 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62980 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49339 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57315 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49794 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53758 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62820 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52487 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64519 - "GET /api/chat/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61734 - "GET /api/chat/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59575 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59576 - "GET /api/member/164/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62639 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59578 - "GET /api/member/162/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59577 - "GET /api/member/165/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62329 - "GET /api/member/164/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59561 - "GET /api/member/162/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59562 - "GET /api/member/165/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61029 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61299 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61300 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57173 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57174 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57231 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57232 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56399 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59626 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59628 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59631 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59629 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59627 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59630 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59733 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64217 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55771 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65437 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64510 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64460 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49791 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55186 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64512 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60373 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60374 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62159 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50280 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50111 - "GET /api/member/165/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50110 - "GET /api/member/164/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64653 - "GET /api/member/162/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53217 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60943 - "GET /api/member/165/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60944 - "GET /api/member/164/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60945 - "GET /api/member/162/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52014 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52013 - "GET /api/member/163/twin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62069 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64838 - "GET /api/member/163/twin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64357 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53083 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54731 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59881 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59882 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49932 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51518 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54802 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55143 - "GET /api/member/162/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55142 - "GET /api/member/162/twin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53591 - "GET /api/member/162/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56112 - "GET /api/member/162/twin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54148 - "POST /api/reports/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58180 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49668 - "GET /api/member/164/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49670 - "GET /api/member/165/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49671 - "GET /api/member/162/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55012 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53350 - "GET /api/member/164/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57445 - "GET /api/member/165/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57446 - "GET /api/member/162/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51455 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64648 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53547 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52248 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65463 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60343 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63342 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51240 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54853 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54855 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54852 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54854 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62901 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62902 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62528 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58209 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62263 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63598 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52861 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49352 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64431 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49671 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64430 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52086 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62985 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54975 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50442 - "GET /api/emergency/164/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50443 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52026 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52027 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55605 - "GET /api/emergency/162/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56128 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59217 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53468 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56130 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56129 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56132 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63080 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56131 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54534 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58776 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:50948 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:50949 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+Kokoro unavailable: No module named 'kokoro'
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:50950 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:50951 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:55155 - "GET /api/tts/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65525 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61299 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56512 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61300 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61301 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61303 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61302 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56511 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63741 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59205 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51180 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55795 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63722 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60219 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60436 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54561 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64078 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56305 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54044 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57874 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'seed_events.py'. Reloading...
+ INFO:     Shutting down
+INFO:     127.0.0.1:59244 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59248 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59246 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     Waiting for connections to close. (CTRL+C to force quit)
+INFO:     127.0.0.1:59247 - "GET /api/household HTTP/1.1" 200 OK
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
+INFO:     Finished server process [11132]
+INFO:     Started server process [20432]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:54108 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:54064 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+Future exception was never retrieved
+future: <Future finished exception=ModuleNotFoundError("No module named 'kokoro'")>
+Traceback (most recent call last):
+  File "C:\Users\Rider\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\Projects\HealthTwin AI\backend\app\api\tts.py", line 31, in _load_pipeline_sync
+    from kokoro import KPipeline  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'kokoro'
+INFO:     127.0.0.1:54107 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54062 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59050 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54109 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51271 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58585 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58586 - "GET /api/member/165/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63953 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63955 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63952 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51724 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51722 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51723 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58040 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58969 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51725 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58970 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59748 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59959 - "GET /api/household/events?limit=8 HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:59958 - "GET /api/household/risk-scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56907 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:56908 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:56909 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:56910 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:61655 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53012 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+Kokoro unavailable: No module named 'kokoro'
+INFO:     127.0.0.1:53435 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52777 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52750 - "GET /api/emergency/165/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53148 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53192 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53878 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64007 - "GET /api/member/163/timeline HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50567 - "GET /api/emergency/163/card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49953 - "GET /api/emergency/163/card HTTP/1.1" 200 OK

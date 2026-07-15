@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTwinStore } from "@/lib/store";
 import { useVoiceCommand } from "@/lib/VoiceCommandContext";
@@ -8,12 +8,17 @@ import { getBriefing, getInsights } from "@/lib/api";
 import { InsightItem, RiskBand } from "@/lib/types";
 import Constellation from "@/components/Constellation";
 import SpeechCard from "@/components/SpeechCard";
+import DengueBanner from "@/components/DengueBanner";
+import RiskRadar from "@/components/RiskRadar";
+import HealthEventFeed from "@/components/HealthEventFeed";
+import EmergencyCard from "@/components/EmergencyCard";
+import HealthTimeline from "@/components/HealthTimeline";
 import Link from "next/link";
 import {
   ShieldAlert, ChevronRight, Play, Users, Activity,
   AlertTriangle, MessageCircle, FileText, BarChart2,
+  Clock, QrCode,
 } from "lucide-react";
-import { useRef } from "react";
 
 function useClockTick() {
   const [now, setNow] = useState(new Date());
@@ -27,11 +32,9 @@ function useClockTick() {
 function formatTime(d: Date) {
   return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
-
 function formatDate(d: Date) {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
-
 function greeting(d: Date): string {
   const h = d.getHours();
   if (h < 12) return "Good morning";
@@ -39,7 +42,6 @@ function greeting(d: Date): string {
   return "Good evening";
 }
 
-// hero SIZE = 152*2 + 32*4 + 8 + 48 = 488px — scale it down to fit whatever space is available
 const HERO_SIZE = 488;
 
 function ScaledConstellation(props: React.ComponentProps<typeof Constellation>) {
@@ -74,6 +76,7 @@ const QUICK_ACTIONS = [
   { href: "/family",  Icon: Users,         label: "Family",        desc: "Manage members" },
 ];
 
+
 export default function HomePage() {
   const {
     household, activeMember,
@@ -90,19 +93,24 @@ export default function HomePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speechText, setSpeechText] = useState("");
 
+  // Emergency card + timeline modals
+  const [emergencyModal, setEmergencyModal] = useState<{ id: number; name: string } | null>(null);
+  const [timelineModal, setTimelineModal]   = useState<{ id: number; name: string } | null>(null);
+
   const members   = household?.members ?? [];
   const selfMember = members.find(m => m.role_label === "Self" || m.role_label?.toLowerCase() === "self");
   const firstName  = selfMember?.display_name?.split(" ")[0] ?? household?.name?.split(" ")[0] ?? "there";
 
-  useEffect(() => {
-    // Kick off TTS warmup in background so Kokoro is ready before the user clicks "Hear briefing"
-    fetch("/api/tts/warmup", { method: "POST" }).catch(() => {});
+  // Focused member (first selected or first member)
+  const focusedLabel = selectedFamilyMembers[0] ?? null;
+  const focusedMember = focusedLabel ? members.find(m => m.role_label === focusedLabel) : null;
 
+  useEffect(() => {
+    fetch("/api/tts/warmup", { method: "POST" }).catch(() => {});
     (async () => {
       const [brief, insightData] = await Promise.all([getBriefing(), getInsights()]);
       if (brief) {
         setBriefing(brief);
-        // Eagerly pre-generate TTS audio so it plays instantly on click
         if (voiceEnabled) {
           const fullGreeting = `${greeting(now)}, ${firstName}. ${brief.spoken}`;
           preloadSpeech(fullGreeting, "en");
@@ -132,7 +140,6 @@ export default function HomePage() {
 
   function stopGreeting() { cancelSpeech(); setIsPlaying(false); }
 
-  // Parse medication count from briefing text e.g. "7 active medications"
   const medCount = briefing?.spoken
     ? (briefing.spoken.match(/(\d+) active medications?/)?.[1] ?? null)
     : null;
@@ -145,7 +152,25 @@ export default function HomePage() {
 
       <SpeechCard text={speechText} isPlaying={isPlaying} onStop={stopGreeting} />
 
-      {/* ── Top bar: time + SOS ─────────────────────────────────────────────── */}
+      {/* Emergency card modal */}
+      {emergencyModal && (
+        <EmergencyCard
+          memberId={emergencyModal.id}
+          memberName={emergencyModal.name}
+          onClose={() => setEmergencyModal(null)}
+        />
+      )}
+
+      {/* Health timeline modal */}
+      {timelineModal && (
+        <HealthTimeline
+          memberId={timelineModal.id}
+          memberName={timelineModal.name}
+          onClose={() => setTimelineModal(null)}
+        />
+      )}
+
+      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
         <div className="flex items-baseline gap-3">
           <motion.span initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -165,7 +190,13 @@ export default function HomePage() {
         </Link>
       </div>
 
-      {/* ── Full-width Samantha dashboard card ─────────────────────────────── */}
+      {/* ── Dengue / pattern alert banner ─────────────────────────────────── */}
+      <DengueBanner
+        conflict={briefing?.display?.conflict ?? null}
+        verdict={briefing?.verdict ?? null}
+      />
+
+      {/* ── Samantha dashboard card ─────────────────────────────────────────── */}
       <div className="px-6 pb-3 shrink-0">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -177,8 +208,6 @@ export default function HomePage() {
             style={{ background: "radial-gradient(ellipse at top left, rgba(15,76,85,0.06) 0%, transparent 60%)" }} />
 
           <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-5 relative z-10">
-
-            {/* S avatar */}
             <motion.div
               className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white text-sm shrink-0"
               style={{ background: "linear-gradient(135deg, var(--primary), var(--accent))", boxShadow: "0 2px 12px rgba(15,76,85,0.20)" }}
@@ -187,7 +216,6 @@ export default function HomePage() {
               S
             </motion.div>
 
-            {/* Greeting */}
             <div className="shrink-0">
               <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-soft)" }}>Samantha</p>
               <p className="text-sm font-bold leading-tight" style={{ color: "var(--ink)" }}>
@@ -196,20 +224,14 @@ export default function HomePage() {
               <p className="text-[10px]" style={{ color: "var(--ink-faint)" }}>{household?.name ?? "Your Family"}</p>
             </div>
 
-            {/* Vertical divider */}
             <div className="hidden md:block w-px h-10 shrink-0" style={{ background: "var(--border)" }} />
 
-            {/* Stat chips */}
             <div className="flex items-center gap-2 flex-1 flex-wrap">
-
-              {/* Member count */}
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
                 style={{ background: "var(--primary-tint)", color: "var(--primary)" }}>
                 <Users size={12} />
                 <span className="text-[11px] font-bold">{members.length} Members</span>
               </div>
-
-              {/* Medication count */}
               {medCount && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
                   style={{ background: "var(--well-bg)", color: "var(--well)" }}>
@@ -217,8 +239,6 @@ export default function HomePage() {
                   <span className="text-[11px] font-bold">{medCount} Medications</span>
                 </div>
               )}
-
-              {/* Watch flags */}
               {watchFlags.map((f, i) => (
                 <motion.div key={i}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -230,8 +250,6 @@ export default function HomePage() {
                   <span className="text-[11px] font-bold max-w-[160px] truncate">{f.title}</span>
                 </motion.div>
               ))}
-
-              {/* Loading shimmer while briefing loads */}
               {!briefing && (
                 <motion.div className="flex gap-1 items-center px-2">
                   {[0, 1, 2].map(i => (
@@ -243,7 +261,6 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Voice + Continue buttons */}
             <div className="flex flex-wrap md:flex-nowrap items-center gap-2 shrink-0 mt-2 md:mt-0">
               {briefing && (
                 <button
@@ -288,7 +305,7 @@ export default function HomePage() {
 
           <div className="px-5 pt-4 pb-1 shrink-0 relative z-10 flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>Family</p>
-            <p className="text-[10px]" style={{ color: "var(--ink-faint)" }}>Tap to focus Samantha</p>
+            <p className="text-[10px]" style={{ color: "var(--ink-faint)" }}>Tap to focus</p>
           </div>
 
           <div className="flex-1 min-h-0 relative z-10">
@@ -310,55 +327,102 @@ export default function HomePage() {
             )}
           </div>
 
+          {/* Selected member panel — shows Emergency Card + Timeline buttons */}
           <AnimatePresence>
             {selectedFamilyMembers.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                className="px-4 pb-4 flex items-center gap-2 flex-wrap justify-center shrink-0 relative z-10">
-                <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>Focused on:</span>
-                {selectedFamilyMembers.map(rl => {
-                  const m = members.find(x => x.role_label === rl);
-                  return (
-                    <span key={rl} className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-                      style={{ background: "var(--primary-tint)", color: "var(--primary)" }}>
-                      {m?.display_name || rl}
-                    </span>
-                  );
-                })}
-                <button onClick={clearFamilySelection}
-                  className="text-[10px] font-semibold hover:opacity-60 transition-opacity"
-                  style={{ color: "var(--ink-faint)" }}>
-                  Clear
-                </button>
+                className="px-4 pb-4 relative z-10"
+                style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="pt-3 flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>
+                    Focused:
+                  </span>
+                  {selectedFamilyMembers.map(rl => {
+                    const m = members.find(x => x.role_label === rl);
+                    return (
+                      <span key={rl} className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: "var(--primary-tint)", color: "var(--primary)" }}>
+                        {m?.display_name || rl}
+                      </span>
+                    );
+                  })}
+                  <button onClick={clearFamilySelection}
+                    className="text-[10px] font-semibold hover:opacity-60 transition-opacity ml-auto"
+                    style={{ color: "var(--ink-faint)" }}>Clear</button>
+                </div>
+
+                {/* Emergency Card + Timeline for focused member */}
+                {focusedMember && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => setEmergencyModal({ id: focusedMember.id, name: focusedMember.display_name })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold hover:opacity-80 transition-opacity"
+                      style={{ background: "var(--urgent-bg)", color: "var(--urgent)" }}
+                    >
+                      <QrCode size={11} /> Emergency Card
+                    </button>
+                    <button
+                      onClick={() => setTimelineModal({ id: focusedMember.id, name: focusedMember.display_name })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold hover:opacity-80 transition-opacity"
+                      style={{ background: "var(--info-bg)", color: "var(--info)" }}
+                    >
+                      <Clock size={11} /> Timeline
+                    </button>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
 
-        {/* RIGHT: Quick actions */}
+        {/* RIGHT: Stacked sections — Actions + Safety + Activity */}
         <motion.div
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.25 }}
-          className="flex flex-col gap-3 min-h-0 lg:overflow-hidden shrink-0"
+          className="flex flex-col gap-3 min-h-0 shrink-0 lg:overflow-y-auto"
         >
-          <p className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: "var(--ink-soft)" }}>
-            Quick Actions
-          </p>
-          <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
-            {QUICK_ACTIONS.map((a) => (
-              <Link key={a.href} href={a.href}
-                className="glass-card p-4 flex flex-col gap-2 hover:opacity-80 transition-opacity">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                  style={{ background: "var(--primary-tint)" }}>
-                  <a.Icon size={15} style={{ color: "var(--primary)" }} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold leading-snug" style={{ color: "var(--ink)" }}>{a.label}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: "var(--ink-faint)" }}>{a.desc}</p>
-                </div>
-              </Link>
-            ))}
+
+          {/* ── Quick Actions ─────────────────────────────────── */}
+          <div className="glass-card p-4 shrink-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "var(--ink-soft)" }}>
+              Quick Actions
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {QUICK_ACTIONS.map((a, i) => (
+                <motion.div
+                  key={a.href}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.06 }}
+                >
+                  <Link href={a.href}
+                    className="flex flex-col gap-3 p-4 rounded-2xl hover:opacity-80 active:scale-[0.98] transition-all block"
+                    style={{ background: "var(--surface-muted)", border: "1px solid var(--border)" }}>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                      style={{ background: "var(--primary-tint)" }}>
+                      <a.Icon size={16} style={{ color: "var(--primary)" }} />
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-bold leading-snug" style={{ color: "var(--ink)" }}>{a.label}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: "var(--ink-faint)" }}>{a.desc}</p>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
           </div>
+
+          {/* ── Family Safety Radar ───────────────────────────── */}
+          <div className="glass-card p-4 shrink-0">
+            <RiskRadar />
+          </div>
+
+          {/* ── Recent Activity ───────────────────────────── */}
+          <div className="glass-card p-4 shrink-0">
+            <HealthEventFeed />
+          </div>
+
         </motion.div>
 
       </div>
