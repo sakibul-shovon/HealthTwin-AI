@@ -17,7 +17,7 @@ export function useHealthTwinCommand() {
 
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { isListening, isSTTSupported, startListening, stopListening, speak, cancelSpeech } =
+  const { isListening, isSTTSupported, startListening, stopListening, speak, preloadSpeech, cancelSpeech } =
     useVoice({
       onTranscript: (t, l) => handleCommand(t, l),
       onError: () => {
@@ -149,6 +149,7 @@ export function useHealthTwinCommand() {
     isListening,
     isSTTSupported,
     speak,
+    preloadSpeech,
     cancelSpeech,
   };
 }

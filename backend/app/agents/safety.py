@@ -1,5 +1,6 @@
 import copy
 import threading
+import time
 from typing import Optional
 from sqlalchemy.orm import Session
 from app.graph.crud import resolve_member, get_member_profile
@@ -61,6 +62,7 @@ def get_cache_key(household_id: int, member_label: str, drug: str, language: str
     return f"{household_id}:{member_label}:{drug.lower()}:{language}"
 
 def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str, dose: Optional[str] = None, purpose: Optional[str] = None, language: str = "en") -> dict:
+    start_time = time.time()
     # 1. Resolve member
     member = resolve_member(db, household_id, member_ref)
     if not member:
@@ -196,6 +198,9 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
         "REFUSE": "Cannot Verify"
     }
 
+    latency_ms = int((time.time() - start_time) * 1000)
+    llm_calls = 0 if explanation is None else 1
+
     envelope = {
         "verdict": gate1_result.verdict,
         "spoken": spoken,
@@ -218,6 +223,8 @@ def run_safety_check(db: Session, household_id: int, member_ref: str, drug: str,
             "verdict": gate1_result.verdict,
             "conflicts": [c.model_dump() for c in gate1_result.conflicts],
             "checked": gate1_result.checked.model_dump(),
+            "latency_ms": latency_ms,
+            "llm_calls": llm_calls,
         },
     }
     

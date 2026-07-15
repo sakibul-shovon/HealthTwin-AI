@@ -20,6 +20,8 @@ export interface Gate1Trace {
     dose: boolean
     allergy: boolean
   }
+  latency_ms?: number
+  llm_calls?: number
 }
 
 export interface CriticalInfo {

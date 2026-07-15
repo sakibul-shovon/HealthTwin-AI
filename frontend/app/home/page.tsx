@@ -7,6 +7,7 @@ import { useVoiceCommand } from "@/lib/VoiceCommandContext";
 import { getBriefing, getInsights } from "@/lib/api";
 import { InsightItem, RiskBand } from "@/lib/types";
 import Constellation from "@/components/Constellation";
+import SpeechCard from "@/components/SpeechCard";
 import Link from "next/link";
 import {
   ShieldAlert, ChevronRight, Play, Users, Activity,
@@ -80,13 +81,14 @@ export default function HomePage() {
     voiceEnabled, setSamanthaGreeted,
   } = useTwinStore();
 
-  const { speak, cancelSpeech } = useVoiceCommand();
+  const { speak, preloadSpeech, cancelSpeech } = useVoiceCommand();
   const now = useClockTick();
 
   const [briefing, setBriefing]   = useState<any>(null);
   const [insights, setInsights]   = useState<InsightItem[]>([]);
   const [riskBands, setRiskBands] = useState<Record<string, RiskBand>>({});
   const [isPlaying, setIsPlaying] = useState(false);
+  const [speechText, setSpeechText] = useState("");
 
   const members   = household?.members ?? [];
   const selfMember = members.find(m => m.role_label === "Self" || m.role_label?.toLowerCase() === "self");
@@ -98,7 +100,14 @@ export default function HomePage() {
 
     (async () => {
       const [brief, insightData] = await Promise.all([getBriefing(), getInsights()]);
-      if (brief) setBriefing(brief);
+      if (brief) {
+        setBriefing(brief);
+        // Eagerly pre-generate TTS audio so it plays instantly on click
+        if (voiceEnabled) {
+          const fullGreeting = `${greeting(now)}, ${firstName}. ${brief.spoken}`;
+          preloadSpeech(fullGreeting, "en");
+        }
+      }
       if (insightData) {
         setInsights(insightData.insights ?? []);
         setRiskBands(insightData.risk_bands ?? {});
@@ -108,11 +117,17 @@ export default function HomePage() {
 
   function playGreeting() {
     if (!briefing || !voiceEnabled) return;
+    const text = `${greeting(now)}, ${firstName}. ${briefing.spoken}`;
+    setSpeechText(text);
     setIsPlaying(true);
-    const handle = speak(`${greeting(now)}, ${firstName}. ${briefing.spoken}`, "en");
+    const handle = speak(text, "en");
     setSamanthaGreeted(true);
-    if (handle) handle.onend = () => setIsPlaying(false);
-    else setTimeout(() => setIsPlaying(false), 4000);
+    if (handle) {
+      const safetyTimer = setTimeout(() => setIsPlaying(false), 120_000);
+      handle.onend = () => { clearTimeout(safetyTimer); setIsPlaying(false); };
+    } else {
+      setTimeout(() => setIsPlaying(false), 4000);
+    }
   }
 
   function stopGreeting() { cancelSpeech(); setIsPlaying(false); }
@@ -127,6 +142,8 @@ export default function HomePage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ background: "var(--canvas)" }}>
+
+      <SpeechCard text={speechText} isPlaying={isPlaying} onStop={stopGreeting} />
 
       {/* ── Top bar: time + SOS ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">

@@ -19,6 +19,9 @@ def seed_rahman_family(db: Session):
         member_ids = [m.id for m in existing.members]
         if member_ids:
             db.query(AgentTrace).filter(AgentTrace.member_id.in_(member_ids)).delete(synchronize_session=False)
+            db.query(SymptomLog).filter(SymptomLog.member_id.in_(member_ids)).delete(synchronize_session=False)
+            # In case there are polymorphic health_events base records, delete them directly
+            # by executing SQL or relying on cascade if set up, but let's just delete SymptomLog.
             db.commit()
         db.delete(existing)
         db.commit()

@@ -1,0 +1,81 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 13.5s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 548ms (72 modules)
+ ○ Compiling /home ...
+ ✓ Compiled / in 16s (1469 modules)
+ GET / 200 in 2516ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 734ms (774 modules)
+ GET /favicon.ico 200 in 944ms
+(node:22772) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Failed to proxy http://127.0.0.1:8000/api/auth/login Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -4078,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8000
+}
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -4078,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8000
+}
+ ○ Compiling /_error ...
+Failed to proxy http://127.0.0.1:8000/api/auth/login Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -4078,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8000
+}
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -4078,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8000
+}
+ ✓ Compiled /_error in 3s (1720 modules)
+ GET / 200 in 359ms
+ GET /favicon.ico 200 in 120ms
+Failed to proxy http://127.0.0.1:8000/api/auth/login Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -4078,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8000
+}
+Error: connect ECONNREFUSED 127.0.0.1:8000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -4078,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8000
+}
+ GET /home 200 in 94ms
+ GET /favicon.ico 200 in 107ms
+ ✓ Compiled in 1725ms (919 modules)
+ ✓ Compiled in 760ms (919 modules)
+ ✓ Compiled in 499ms (919 modules)
+ ✓ Compiled in 3.9s (1700 modules)
+ ✓ Compiled in 2.6s (1700 modules)
+ ✓ Compiled in 2.1s (1700 modules)
+ ✓ Compiled in 2.1s (1704 modules)
+ ✓ Compiled in 2.2s (1704 modules)

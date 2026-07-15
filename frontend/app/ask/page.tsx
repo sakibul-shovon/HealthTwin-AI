@@ -447,10 +447,10 @@ export default function ConversationsPage() {
               </p>
               <div className="flex flex-wrap gap-2 mt-6 justify-center max-w-sm">
                 {[
-                  "Can I give Baba ibuprofen?",
-                  "Family health summary",
+                  "Is metformin safe for Ma?",
+                  "Can Child take aspirin?",
+                  "Is naproxen safe for Baba?",
                   "বাবার ওষুধের তালিকা",
-                  "Any medication alerts?",
                 ].map(q => (
                   <button key={q}
                     onClick={async () => { await ensureSession(); handleCommand(q, q.match(/[ঀ-৿]/) ? "bn" : "en", false); }}

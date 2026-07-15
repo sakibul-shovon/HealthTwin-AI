@@ -19,5 +19,40 @@
     "reason": "Teratogenic and bleeding risk",
     "severity": "high",
     "source": "WHO fact sheet"
+  },
+  {
+    "drug": "aspirin",
+    "contraindicated_if": ["pregnant"],
+    "reason": "Increased risk of bleeding in the mother and baby",
+    "severity": "high",
+    "source": "WHO fact sheet"
+  },
+  {
+    "drug": "aspirin",
+    "contraindicated_if": ["kidney_impaired"],
+    "reason": "NSAID-induced nephrotoxicity",
+    "severity": "high",
+    "source": "WHO fact sheet"
+  },
+  {
+    "drug": "paracetamol",
+    "contraindicated_if": ["liver_impaired"],
+    "reason": "Risk of severe hepatotoxicity",
+    "severity": "high",
+    "source": "WHO fact sheet"
+  },
+  {
+    "drug": "lisinopril",
+    "contraindicated_if": ["pregnant"],
+    "reason": "Risk of fetal renal damage",
+    "severity": "high",
+    "source": "WHO fact sheet"
+  },
+  {
+    "drug": "atorvastatin",
+    "contraindicated_if": ["pregnant", "liver_impaired"],
+    "reason": "Teratogenic / exacerbation of liver disease",
+    "severity": "high",
+    "source": "WHO fact sheet"
   }
 ]

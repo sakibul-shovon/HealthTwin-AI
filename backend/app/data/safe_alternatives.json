@@ -10,5 +10,23 @@
     "purpose": "pain",
     "condition_or_drug": "kidney_impaired",
     "alternative": "Paracetamol 500 mg"
+  },
+  {
+    "risky_drug": "aspirin",
+    "purpose": "pain",
+    "condition_or_drug": "warfarin",
+    "alternative": "Paracetamol 500 mg"
+  },
+  {
+    "risky_drug": "aspirin",
+    "purpose": "pain",
+    "condition_or_drug": "kidney_impaired",
+    "alternative": "Paracetamol 500 mg"
+  },
+  {
+    "risky_drug": "paracetamol",
+    "purpose": "pain",
+    "condition_or_drug": "liver_impaired",
+    "alternative": "Consult a doctor for specialized pain management"
   }
 ]

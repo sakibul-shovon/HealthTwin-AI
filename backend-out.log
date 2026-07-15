@@ -1,0 +1,48 @@
+INFO:     127.0.0.1:61640 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61651 - "GET /api/health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61652 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61658 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61659 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64187 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52780 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52782 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57556 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52781 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64045 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56122 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56123 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56125 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56124 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56121 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55024 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:55025 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:55026 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:55027 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57213 - "GET /api/tts/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49202 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49203 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49205 - "GET /api/chat/history?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49204 - "GET /api/household HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52200 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61953 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52202 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52201 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61954 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61955 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58990 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:58991 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:58992 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:58993 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:60300 - "GET /api/tts/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52370 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53667 - "POST /api/tts/warmup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58110 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58155 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49668 - "GET /api/ai/insights HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53170 - "GET /api/voice/briefing HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54338 - "POST /api/tts HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:60567 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61299 - "GET /api/tts/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58210 - "GET /api/tts/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60388 - "POST /api/voice/command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62256 - "GET /api/tts/health HTTP/1.1" 200 OK

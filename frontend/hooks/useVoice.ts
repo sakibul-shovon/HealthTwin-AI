@@ -63,6 +63,11 @@ function safeSynth(utterance: SpeechSynthesisUtterance) {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
+// ─── Global TTS Cache for Background Pre-fetching ────────────────────────────
+// Used to cache synthesized audio arrays by sentence so they play instantly.
+const ttsCache = new Map<string, Promise<ArrayBuffer | null>>();
+// ────────────────────────────────────────────────────────────────────────────
+
 /** Minimal handle returned by speak() */
 export interface SpeechHandle {
   onend: ((ev: Event) => void) | null;
@@ -82,6 +87,7 @@ export interface UseVoiceReturn {
   startListening: (lang: "en" | "bn") => void;
   stopListening: () => void;
   speak: (text: string, lang: "en" | "bn") => SpeechHandle | null;
+  preloadSpeech: (text: string, lang: "en" | "bn") => void;
   cancelSpeech: () => void;
 }
 
@@ -174,9 +180,18 @@ export function useVoice({
       // ── English: server-side Kokoro TTS → Web Speech fallback ─────────────
       const handle: SpeechHandle = { onend: null };
 
+      // Create AudioContext synchronously while still in the click-handler's
+      // user-gesture context. Browsers suspend any AudioContext that is created
+      // after an await(), and resume() also requires a gesture — so creating it
+      // here (before the IIFE) is the only reliable way to get audio to play.
+      const ctx = new AudioContext({ sampleRate: 24_000 });
+      audioCtxRef.current = ctx;
+
       (async () => {
         try {
-          if (genRef.current !== gen) return;
+          if (genRef.current !== gen) { ctx.close().catch(() => {}); return; }
+
+          if (ctx.state === "suspended") await ctx.resume();
 
           // Quick health probe — skip server TTS entirely if Kokoro isn't loaded yet
           // so there's zero silent pause before browser TTS kicks in.
@@ -188,35 +203,65 @@ export function useVoice({
             throw new Error("TTS server not ready");
           }
 
-          const res = await fetch("/api/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, voice: "af_bella", speed: 1.0 }),
-            signal: AbortSignal.timeout(8_000),
-          });
+          // Chunk the text to stream it to the user sentence-by-sentence
+          const sentences = text.match(/[^.!?\n]+[.!?\n]*/g)?.map(s => s.trim()).filter(Boolean) || [text];
+          if (sentences.length === 0) return;
 
-          if (!res.ok) throw new Error(`TTS ${res.status}`);
+          let nextStartTime = 0;
+          let isFirst = true;
 
-          const arrayBuf = await res.arrayBuffer();
-          if (genRef.current !== gen) return;
-
-          const ctx = new AudioContext({ sampleRate: 24_000 });
-          if (ctx.state === "suspended") await ctx.resume();
-          audioCtxRef.current = ctx;
-
-          const audioBuf = await ctx.decodeAudioData(arrayBuf);
-          if (genRef.current !== gen) { ctx.close(); return; }
-
-          const src = ctx.createBufferSource();
-          src.buffer = audioBuf;
-          src.connect(ctx.destination);
-          src.start(0);
-          src.onended = () => {
-            if (genRef.current === gen) handle.onend?.(new Event("end"));
+          const fetchSentence = (s: string) => {
+            if (ttsCache.has(s)) return ttsCache.get(s)!;
+            const p = fetch("/api/tts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: s, voice: "af_bella", speed: 1.0 }),
+              signal: AbortSignal.timeout(10_000),
+            }).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
+            ttsCache.set(s, p);
+            return p;
           };
+
+          let nextFetch = fetchSentence(sentences[0]);
+
+          for (let i = 0; i < sentences.length; i++) {
+            if (genRef.current !== gen) break;
+            const arrayBuf = await nextFetch;
+
+            // Fetch the next chunk while the current one is being processed/played
+            if (i + 1 < sentences.length) {
+              nextFetch = fetchSentence(sentences[i + 1]);
+            }
+
+            if (!arrayBuf) continue;
+            if (genRef.current !== gen) break;
+
+            const audioBuf = await ctx.decodeAudioData(arrayBuf).catch(() => null);
+            if (!audioBuf) continue;
+            if (genRef.current !== gen) { ctx.close(); return; }
+
+            const src = ctx.createBufferSource();
+            src.buffer = audioBuf;
+            src.connect(ctx.destination);
+
+            if (isFirst || nextStartTime < ctx.currentTime) {
+              nextStartTime = ctx.currentTime;
+              isFirst = false;
+            }
+
+            src.start(nextStartTime);
+            nextStartTime += audioBuf.duration;
+
+            if (i === sentences.length - 1) {
+              src.onended = () => {
+                if (genRef.current === gen) handle.onend?.(new Event("end"));
+              };
+            }
+          }
         } catch {
           // Server unavailable (Docker not running, network error, etc.)
           // → fall back to the best available browser voice
+          ctx.close().catch(() => {});
           if (genRef.current !== gen || !("speechSynthesis" in window)) return;
           const u = new SpeechSynthesisUtterance(text);
           u.lang = "en-GB"; u.rate = 0.92; u.pitch = 1.05;
@@ -232,6 +277,23 @@ export function useVoice({
     []
   );
 
+  const preloadSpeech = useCallback((text: string, lang: "en" | "bn") => {
+    if (lang === "bn") return; // WebSpeech only, no server-side TTS
+    const sentences = text.match(/[^.!?\n]+[.!?\n]*/g)?.map(s => s.trim()).filter(Boolean) || [text];
+    for (const s of sentences) {
+      if (!ttsCache.has(s)) {
+        const p = fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: s, voice: "af_bella", speed: 1.0 }),
+          // Higher timeout for background prefetching since multiple sentences queue up
+          signal: AbortSignal.timeout(20_000),
+        }).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
+        ttsCache.set(s, p);
+      }
+    }
+  }, []);
+
   const cancelSpeech = useCallback(() => {
     genRef.current++;
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -242,5 +304,5 @@ export function useVoice({
     audioCtxRef.current = null;
   }, []);
 
-  return { isListening, isSTTSupported, isTTSSupported, startListening, stopListening, speak, cancelSpeech };
+  return { isListening, isSTTSupported, isTTSSupported, startListening, stopListening, speak, preloadSpeech, cancelSpeech };
 }

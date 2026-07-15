@@ -66,7 +66,7 @@
     "drug_a": "amlodipine",
     "drug_b": "simvastatin",
     "severity": "moderate",
-    "mechanism": "amlodipine inhibits CYP3A4, increasing simvastatin levels and myopathy risk — limit simvastatin to 20mg/day",
+    "mechanism": "amlodipine inhibits CYP3A4, increasing simvastatin levels and myopathy risk \u2014 limit simvastatin to 20mg/day",
     "source": "DrugBank subset"
   },
   {
@@ -102,6 +102,125 @@
     "drug_b": "tramadol",
     "severity": "high",
     "mechanism": "serotonin syndrome risk (SSRI + opioid with serotonergic activity); avoid combination",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "omeprazole",
+    "drug_b": "clopidogrel",
+    "severity": "high",
+    "mechanism": "omeprazole inhibits CYP2C19, reducing the activation and antiplatelet effect of clopidogrel",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "azithromycin",
+    "drug_b": "amiodarone",
+    "severity": "high",
+    "mechanism": "increased risk of QT interval prolongation and cardiac arrhythmias",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "ciprofloxacin",
+    "drug_b": "tizanidine",
+    "severity": "high",
+    "mechanism": "ciprofloxacin strongly inhibits CYP1A2, increasing tizanidine levels and causing severe hypotension and sedation",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "paracetamol",
+    "drug_b": "warfarin",
+    "severity": "moderate",
+    "mechanism": "regular daily use of paracetamol may increase the anticoagulant effect of warfarin",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "atorvastatin",
+    "drug_b": "clarithromycin",
+    "severity": "high",
+    "mechanism": "clarithromycin inhibits CYP3A4, significantly increasing atorvastatin levels and risk of rhabdomyolysis",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "levothyroxine",
+    "drug_b": "calcium carbonate",
+    "severity": "moderate",
+    "mechanism": "calcium can bind to levothyroxine in the gut, reducing its absorption. Take at least 4 hours apart",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "levothyroxine",
+    "drug_b": "iron",
+    "severity": "moderate",
+    "mechanism": "iron supplements can reduce the absorption of levothyroxine. Take at least 4 hours apart",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "metronidazole",
+    "drug_b": "alcohol",
+    "severity": "high",
+    "mechanism": "disulfiram-like reaction (nausea, vomiting, flushing, tachycardia) when combined with alcohol",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "sildenafil",
+    "drug_b": "nitroglycerin",
+    "severity": "high",
+    "mechanism": "concomitant use can cause profound and potentially fatal hypotension",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "spironolactone",
+    "drug_b": "potassium chloride",
+    "severity": "high",
+    "mechanism": "severe hyperkalemia risk due to combination of potassium-sparing diuretic and potassium supplement",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "diltiazem",
+    "drug_b": "simvastatin",
+    "severity": "high",
+    "mechanism": "diltiazem inhibits CYP3A4, increasing simvastatin levels and risk of myopathy",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "methotrexate",
+    "drug_b": "ibuprofen",
+    "severity": "high",
+    "mechanism": "NSAIDs can decrease the renal excretion of methotrexate, leading to severe toxicity",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "fluconazole",
+    "drug_b": "warfarin",
+    "severity": "high",
+    "mechanism": "fluconazole inhibits CYP2C9, increasing warfarin levels and bleeding risk",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "losartan",
+    "drug_b": "spironolactone",
+    "severity": "high",
+    "mechanism": "increased risk of hyperkalemia when ARB is combined with potassium-sparing diuretic",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "citalopram",
+    "drug_b": "omeprazole",
+    "severity": "moderate",
+    "mechanism": "omeprazole can increase citalopram levels, increasing the risk of QT prolongation",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "pantoprazole",
+    "drug_b": "levothyroxine",
+    "severity": "moderate",
+    "mechanism": "reduced gastric acidity may decrease levothyroxine absorption",
+    "source": "DrugBank subset"
+  },
+  {
+    "drug_a": "allopurinol",
+    "drug_b": "azathioprine",
+    "severity": "high",
+    "mechanism": "allopurinol inhibits xanthine oxidase, leading to severe azathioprine toxicity (bone marrow suppression)",
     "source": "DrugBank subset"
   }
 ]
