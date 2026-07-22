@@ -17,6 +17,24 @@ from app.core.auth import get_current_household_id
 
 _CARE_WRITE_INTENTS = {"SET_REMINDER"}
 
+_MEMBER_ALIASES: dict[str, str] = {
+    "baba": "Baba", "father": "Baba", "dad": "Baba", "বাবা": "Baba", "আব্বা": "Baba", "আব্বু": "Baba",
+    "ma": "Ma", "mom": "Ma", "mother": "Ma", "mum": "Ma", "mama": "Ma", "মা": "Ma", "আম্মা": "Ma", "আম্মু": "Ma",
+    "child": "Child", "son": "Child", "daughter": "Child", "kid": "Child", "ছেলে": "Child", "মেয়ে": "Child",
+    "self": "Self", "me": "Self", "myself": "Self", "আমি": "Self",
+}
+
+def _extract_member_from_transcript(transcript: str, db: "Session", household_id: int) -> Optional[str]:
+    """Scan transcript for member alias words; return role_label if found."""
+    from app.graph.crud import resolve_member
+    lower = transcript.lower()
+    for alias, role_label in _MEMBER_ALIASES.items():
+        if alias in lower:
+            m = resolve_member(db, household_id, alias)
+            if m:
+                return m.role_label
+    return None
+
 router = APIRouter(prefix="/voice", tags=["voice"])
 
 
@@ -49,7 +67,8 @@ def voice_command(
 
     red_flag = scan_red_flags(req.transcript or "")
     if red_flag:
-        raw = build_emergency_envelope(db, household_id, red_flag, None, language)
+        member_ref = _extract_member_from_transcript(req.transcript or "", db, household_id)
+        raw = build_emergency_envelope(db, household_id, red_flag, member_ref, language)
     else:
         try:
             raw = run_brain(db, household_id, req.transcript, language, history=history)

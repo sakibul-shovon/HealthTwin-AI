@@ -68,6 +68,12 @@ function safeSynth(utterance: SpeechSynthesisUtterance) {
 const ttsCache = new Map<string, Promise<ArrayBuffer | null>>();
 // ────────────────────────────────────────────────────────────────────────────
 
+// ─── Kokoro availability cache ───────────────────────────────────────────────
+// Populated eagerly on hook mount so speak() knows which path to take
+// BEFORE the user clicks (gesture window still open = Web Speech can play).
+let kokoroAvailable: boolean | null = null;
+// ────────────────────────────────────────────────────────────────────────────
+
 /** Minimal handle returned by speak() */
 export interface SpeechHandle {
   onend: ((ev: Event) => void) | null;
@@ -125,6 +131,15 @@ export function useVoice({
   useEffect(() => {
     setIsSTTSupported(!!getSpeechRecognition());
     setIsTTSSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+
+    // Eagerly check Kokoro availability so speak() knows the path before
+    // the first user click (gesture window must still be open at that point).
+    if (kokoroAvailable === null) {
+      fetch("/api/tts/health", { signal: AbortSignal.timeout(3_000) })
+        .then(r => r.json())
+        .then((j: { available: boolean }) => { kokoroAvailable = j.available === true; })
+        .catch(() => { kokoroAvailable = false; });
+    }
   }, []);
 
   const startListening = useCallback((lang: "en" | "bn") => {
@@ -180,6 +195,19 @@ export function useVoice({
       // ── English: server-side Kokoro TTS → Web Speech fallback ─────────────
       const handle: SpeechHandle = { onend: null };
 
+      // If Kokoro is known unavailable, use Web Speech RIGHT NOW — still inside
+      // the user-gesture stack so the browser will allow speechSynthesis.speak().
+      if (kokoroAvailable === false) {
+        if (!("speechSynthesis" in window)) return null;
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "en-GB"; u.rate = 0.92; u.pitch = 1.05;
+        const v = cachedFemaleVoice ?? pickFemaleVoice();
+        if (v) u.voice = v;
+        u.onend = () => { if (genRef.current === gen) handle.onend?.(new Event("end")); };
+        safeSynth(u);
+        return handle;
+      }
+
       // Create AudioContext synchronously while still in the click-handler's
       // user-gesture context. Browsers suspend any AudioContext that is created
       // after an await(), and resume() also requires a gesture — so creating it
@@ -193,14 +221,17 @@ export function useVoice({
 
           if (ctx.state === "suspended") await ctx.resume();
 
-          // Quick health probe — skip server TTS entirely if Kokoro isn't loaded yet
-          // so there's zero silent pause before browser TTS kicks in.
-          try {
-            const h = await fetch("/api/tts/health", { signal: AbortSignal.timeout(1_500) });
-            const hj = await h.json();
-            if (!hj.available) throw new Error("not ready");
-          } catch {
-            throw new Error("TTS server not ready");
+          // If status is still unknown (health check in progress), wait for it briefly.
+          if (kokoroAvailable === null) {
+            try {
+              const h = await fetch("/api/tts/health", { signal: AbortSignal.timeout(1_500) });
+              const hj = await h.json();
+              kokoroAvailable = hj.available === true;
+              if (!kokoroAvailable) throw new Error("not ready");
+            } catch {
+              kokoroAvailable = false;
+              throw new Error("TTS server not ready");
+            }
           }
 
           // Chunk the text to stream it to the user sentence-by-sentence

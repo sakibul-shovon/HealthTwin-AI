@@ -79,3 +79,84 @@ Error: connect ECONNREFUSED 127.0.0.1:8000
  ✓ Compiled in 2.1s (1700 modules)
  ✓ Compiled in 2.1s (1704 modules)
  ✓ Compiled in 2.2s (1704 modules)
+ ✓ Compiled in 2.8s (921 modules)
+ ✓ Compiled in 725ms (921 modules)
+ ✓ Compiled in 837ms (921 modules)
+ ✓ Compiled in 280ms (921 modules)
+ ✓ Compiled in 468ms (921 modules)
+ ✓ Compiled in 550ms (921 modules)
+ ✓ Compiled in 1992ms (921 modules)
+ ✓ Compiled in 607ms (921 modules)
+ ✓ Compiled in 11.2s (1746 modules)
+ ✓ Compiled in 2.3s (1746 modules)
+ ✓ Compiled in 2.8s (1746 modules)
+ GET / 200 in 1453ms
+ ○ Compiling /ask ...
+ ✓ Compiled /ask in 3.2s (1748 modules)
+ ○ Compiling /family ...
+ ✓ Compiled /family in 5.1s (1762 modules)
+ ○ Compiling /records ...
+ ✓ Compiled /records in 1391ms (1776 modules)
+ ○ Compiling /emergency ...
+ ✓ Compiled /emergency in 832ms (1786 modules)
+ ○ Compiling /system ...
+ ✓ Compiled /system in 2.6s (1806 modules)
+ ○ Compiling /family/[memberId] ...
+ ✓ Compiled /family/[memberId] in 1375ms (1813 modules)
+ ✓ Compiled in 2.7s (1799 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /emergency 200 in 431ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 809ms (851 modules)
+ GET /favicon.ico 200 in 1060ms
+ ✓ Compiled in 479ms (980 modules)
+ ⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at loadManifest (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\load-manifest.js:36:25)
+    at DevServer.getNextFontManifest (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\next-server.js:750:47)
+    at DevServer.findPageComponents (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\dev\next-dev-server.js:571:43)
+    at async DevServer.renderPageComponent (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\base-server.js:1910:24)
+    at async DevServer.renderToResponseImpl (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\base-server.js:818:17)
+    at async D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (D:\Projects\HealthTwin AI\frontend\node_modules\next\dist\server\lib\start-server.js:141:13) {
+  page: '/emergency'
+}
+ ✓ Compiled in 470ms (980 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1012ms (1819 modules)
+ GET /emergency 200 in 302ms
+ ✓ Compiled in 390ms (981 modules)
+ ✓ Compiled in 607ms (981 modules)
+ ✓ Compiled in 683ms (981 modules)
+ ✓ Compiled in 1176ms (981 modules)
+ ✓ Compiled in 993ms (980 modules)
+ ✓ Compiled in 593ms (980 modules)
+ ✓ Compiled in 501ms (980 modules)
+ ✓ Compiled in 873ms (980 modules)
+ ✓ Compiled in 377ms (980 modules)
+ ✓ Compiled in 468ms (980 modules)
+ ○ Compiling /get-started ...
+ ✓ Compiled /home in 2.9s (1817 modules)
+ ✓ Compiled in 3.2s (1816 modules)
+ ✓ Compiled in 1212ms (1816 modules)
+ ✓ Compiled in 1582ms (1816 modules)
+ GET /home 200 in 240ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1762ms (863 modules)
+ GET /favicon.ico 200 in 1946ms
+ GET /home 200 in 632ms
+ GET /favicon.ico 200 in 47ms
+ GET /home 200 in 89ms
+ GET /favicon.ico 200 in 274ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1421ms (870 modules)
+ ○ Compiling /ask ...
+ ✓ Compiled /ask in 857ms (839 modules)
